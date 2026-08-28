@@ -8,7 +8,7 @@ import { logAudit } from '../services/audit.js';
 const router = express.Router();
 
 // POST /disputes (authenticate)
-router.post('/', authenticate, (req, res) => {
+router.post('/disputes', authenticate, (req, res) => {
   const { listing_id, delivery_id, description, photo_url } = req.body;
 
   const id = newId();
@@ -33,7 +33,7 @@ router.post('/', authenticate, (req, res) => {
 });
 
 // GET /admin/disputes (authenticate, authorize('ADMIN'))
-router.get('/admin', authenticate, authorize('ADMIN'), (req, res) => {
+router.get('/admin/disputes', authenticate, authorize('ADMIN'), (req, res) => {
   let allDisputes = findAll(disputes);
 
   const { status } = req.query;
@@ -47,7 +47,7 @@ router.get('/admin', authenticate, authorize('ADMIN'), (req, res) => {
 });
 
 // POST /admin/disputes/:id/resolve (authenticate, authorize('ADMIN'))
-router.post('/admin/:id/resolve', authenticate, authorize('ADMIN'), (req, res) => {
+router.post('/admin/disputes/:id/resolve', authenticate, authorize('ADMIN'), (req, res) => {
   const dispute = disputes.get(req.params.id);
 
   if (!dispute) {

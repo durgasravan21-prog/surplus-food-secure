@@ -7,7 +7,7 @@ import { success } from '../utils/envelope.js';
 const router = express.Router();
 
 // GET /stats/impact (authenticate)
-router.get('/impact', authenticate, (req, res) => {
+router.get('/stats/impact', authenticate, (req, res) => {
   let listings = Array.from(storeListings.values());
   const { user_id } = req.query;
 

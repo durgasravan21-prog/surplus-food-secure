@@ -18,7 +18,9 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
+
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 import { generalLimiter } from './middleware/rateLimiter.js';
@@ -51,14 +53,33 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Security & parsing middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: true,
   credentials: true,
 }));
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    console.log(`[HTTP] ${req.method} ${req.path} - ${res.statusCode}`);
+  });
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(generalLimiter);
 
 // Serve uploaded files statically (local storage mode)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+// Handle direct file uploads (for local storage mode)
+app.put('/uploads/:filename', (req, res) => {
+  const filePath = path.join(__dirname, '..', 'uploads', req.params.filename);
+  const writeStream = fs.createWriteStream(filePath);
+  req.pipe(writeStream);
+  req.on('end', () => {
+    res.status(200).json({ success: true });
+  });
+  writeStream.on('error', (err) => {
+    res.status(500).json({ error: { message: err.message } });
+  });
+});
 
 // ── Health Check (no auth required) ─────────────────────────────────────────
 app.get('/v1/health', (req, res) => {

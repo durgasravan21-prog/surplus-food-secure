@@ -11,7 +11,7 @@ import { triggerDeliveryAssignment } from '../services/deliveryAssignment.js';
 const router = express.Router();
 
 // GET /delivery-offers/pending (authenticate, authorize('DELIVERY_PARTNER','ADMIN'))
-router.get('/pending', authenticate, authorize('DELIVERY_PARTNER', 'ADMIN'), (req, res) => {
+router.get('/delivery-offers/pending', authenticate, authorize('DELIVERY_PARTNER', 'ADMIN'), (req, res) => {
   const assignments = findAll(deliveryAssignments)
     .filter(a => a.partner_id === req.user.id && a.status === 'PENDING');
 
@@ -33,7 +33,7 @@ router.get('/pending', authenticate, authorize('DELIVERY_PARTNER', 'ADMIN'), (re
 });
 
 // POST /delivery-offers/:id/accept (authenticate, authorize('DELIVERY_PARTNER'), idempotency)
-router.post('/:id/accept', authenticate, authorize('DELIVERY_PARTNER'), idempotency, (req, res) => {
+router.post('/delivery-offers/:id/accept', authenticate, authorize('DELIVERY_PARTNER'), idempotency, (req, res) => {
   const assignment = deliveryAssignments.get(req.params.id);
 
   if (!assignment) {
@@ -68,7 +68,7 @@ router.post('/:id/accept', authenticate, authorize('DELIVERY_PARTNER'), idempote
 });
 
 // POST /delivery-offers/:id/decline (authenticate, authorize('DELIVERY_PARTNER'), idempotency)
-router.post('/:id/decline', authenticate, authorize('DELIVERY_PARTNER'), idempotency, (req, res) => {
+router.post('/delivery-offers/:id/decline', authenticate, authorize('DELIVERY_PARTNER'), idempotency, (req, res) => {
   const assignment = deliveryAssignments.get(req.params.id);
 
   if (!assignment) {

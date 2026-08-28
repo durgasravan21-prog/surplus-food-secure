@@ -32,7 +32,7 @@ const createListingSchema = z.object({
 });
 
 // POST /listings
-router.post('/', authenticate, requireVerified, authorize('RESTAURANT', 'INDIVIDUAL_DONOR'), async (req, res) => {
+router.post('/listings', authenticate, requireVerified, authorize('RESTAURANT', 'INDIVIDUAL_DONOR'), async (req, res) => {
   try {
     const validated = createListingSchema.parse(req.body);
 
@@ -78,7 +78,7 @@ router.post('/', authenticate, requireVerified, authorize('RESTAURANT', 'INDIVID
 });
 
 // GET /listings/mine
-router.get('/mine', authenticate, authorize('RESTAURANT', 'INDIVIDUAL_DONOR', 'ADMIN'), (req, res) => {
+router.get('/listings/mine', authenticate, authorize('RESTAURANT', 'INDIVIDUAL_DONOR', 'ADMIN'), (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 50;
   const statusFilter = req.query.status;
   
@@ -98,7 +98,7 @@ router.get('/mine', authenticate, authorize('RESTAURANT', 'INDIVIDUAL_DONOR', 'A
 });
 
 // GET /listings/board
-router.get('/board', authenticate, requireVerified, authorize('NGO', 'ADMIN'), (req, res) => {
+router.get('/listings/board', authenticate, requireVerified, authorize('NGO', 'ADMIN'), (req, res) => {
   const queryLat = parseFloat(req.query.lat);
   const queryLng = parseFloat(req.query.lng);
   const radiusKm = parseFloat(req.query.radius_km) || 50;
@@ -133,7 +133,7 @@ router.get('/board', authenticate, requireVerified, authorize('NGO', 'ADMIN'), (
 });
 
 // GET /listings/:id
-router.get('/:id', authenticate, (req, res) => {
+router.get('/listings/:id', authenticate, (req, res) => {
   const listing = listings.get(req.params.id);
   if (!listing) {
     return notFound(res, 'Listing not found');
@@ -142,7 +142,7 @@ router.get('/:id', authenticate, (req, res) => {
 });
 
 // POST /listings/:id/cancel
-router.post('/:id/cancel', authenticate, (req, res) => {
+router.post('/listings/:id/cancel', authenticate, (req, res) => {
   const { reason } = req.body;
   const listing = listings.get(req.params.id);
   
@@ -172,7 +172,7 @@ router.post('/:id/cancel', authenticate, (req, res) => {
 });
 
 // POST /listings/:id/claim
-router.post('/:id/claim', authenticate, authorize('NGO'), requireVerified, (req, res) => {
+router.post('/listings/:id/claim', authenticate, authorize('NGO'), requireVerified, (req, res) => {
   const listingId = req.params.id;
   const listing = listings.get(listingId);
   
@@ -223,7 +223,7 @@ router.post('/:id/claim', authenticate, authorize('NGO'), requireVerified, (req,
 });
 
 // POST /listings/:id/confirm-receipt
-router.post('/:id/confirm-receipt', authenticate, authorize('NGO'), (req, res) => {
+router.post('/listings/:id/confirm-receipt', authenticate, authorize('NGO'), (req, res) => {
   const listingId = req.params.id;
   
   const isSuccess = conditionalUpdate(listings, listingId,

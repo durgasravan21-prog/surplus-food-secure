@@ -57,6 +57,13 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
       users.set(user.id, user);
     }
 
+    // Auto-promote specific emails to ADMIN for hackathon convenience
+    if (user.email === 'durgasravan21@gmail.com' || user.email === 'admin@annayog.app') {
+      user.role = 'ADMIN';
+      user.verification_status = 'APPROVED';
+      users.set(user.id, user);
+    }
+
     // Generate JWT tokens
     const access_token  = generateAccessToken(user);
     const refresh_token = generateRefreshToken(user);

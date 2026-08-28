@@ -7,7 +7,7 @@ import { logAudit } from '../services/audit.js';
 
 const router = express.Router();
 
-router.post('/submit', authenticate, async (req, res) => {
+router.post('/verification/submit', authenticate, async (req, res) => {
   try {
     const user = users.get(req.user.id);
     if (!user) return notFound(res, 'User not found');
@@ -97,7 +97,7 @@ router.post('/submit', authenticate, async (req, res) => {
   }
 });
 
-router.get('/me', authenticate, async (req, res) => {
+router.get('/verification/me', authenticate, async (req, res) => {
   try {
     const userDocs = findAll(verificationDocs).filter(d => d.user_id === req.user.id);
     if (userDocs.length === 0) {
@@ -118,7 +118,7 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
-router.post('/:id/review', authenticate, authorize('ADMIN'), async (req, res) => {
+router.post('/verification/:id/review', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const { id } = req.params;
     const { decision, reason } = req.body;

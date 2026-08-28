@@ -9,7 +9,7 @@ import { broadcast } from '../websocket/index.js';
 const router = express.Router();
 
 // POST /delivery/:id/status (authenticate, authorize('DELIVERY_PARTNER'))
-router.post('/:id/status', authenticate, authorize('DELIVERY_PARTNER'), (req, res) => {
+router.post('/delivery/:id/status', authenticate, authorize('DELIVERY_PARTNER'), (req, res) => {
   const assignment = deliveryAssignments.get(req.params.id);
   const { status } = req.body;
 
@@ -59,7 +59,7 @@ router.post('/:id/status', authenticate, authorize('DELIVERY_PARTNER'), (req, re
 });
 
 // POST /delivery/:id/photo (authenticate, authorize('DELIVERY_PARTNER'))
-router.post('/:id/photo', authenticate, authorize('DELIVERY_PARTNER'), (req, res) => {
+router.post('/delivery/:id/photo', authenticate, authorize('DELIVERY_PARTNER'), (req, res) => {
   const assignment = deliveryAssignments.get(req.params.id);
   const { stage, file_url } = req.body;
 
@@ -86,7 +86,7 @@ router.post('/:id/photo', authenticate, authorize('DELIVERY_PARTNER'), (req, res
 });
 
 // POST /delivery/:id/no-show (authenticate)
-router.post('/:id/no-show', authenticate, (req, res) => {
+router.post('/delivery/:id/no-show', authenticate, (req, res) => {
   const assignment = deliveryAssignments.get(req.params.id);
   const { flagged_role, notes } = req.body;
 
@@ -133,7 +133,7 @@ router.post('/:id/no-show', authenticate, (req, res) => {
 });
 
 // POST /delivery/:id/self-arrange (authenticate, authorize('NGO'))
-router.post('/:id/self-arrange', authenticate, authorize('NGO'), (req, res) => {
+router.post('/delivery/:id/self-arrange', authenticate, authorize('NGO'), (req, res) => {
   const assignment = deliveryAssignments.get(req.params.id);
   
   if (!assignment) {

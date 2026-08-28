@@ -11,7 +11,7 @@ import { triggerMatching } from '../services/matchingEngine.js';
 
 const router = Router();
 
-router.post('/users/:id/suspend', authenticate, authorize('ADMIN'), (req, res) => {
+router.post('/admin/users/:id/suspend', authenticate, authorize('ADMIN'), (req, res) => {
   const { reason } = req.body;
   const { id } = req.params;
   
@@ -34,7 +34,7 @@ router.post('/users/:id/suspend', authenticate, authorize('ADMIN'), (req, res) =
   return success(res, { success: true });
 });
 
-router.post('/users/:id/reinstate', authenticate, authorize('ADMIN'), (req, res) => {
+router.post('/admin/users/:id/reinstate', authenticate, authorize('ADMIN'), (req, res) => {
   const { id } = req.params;
   
   const user = users.get(id);
@@ -48,7 +48,7 @@ router.post('/users/:id/reinstate', authenticate, authorize('ADMIN'), (req, res)
   return success(res, { success: true });
 });
 
-router.patch('/users/:id/role', authenticate, authorize('ADMIN'), (req, res) => {
+router.patch('/admin/users/:id/role', authenticate, authorize('ADMIN'), (req, res) => {
   const { role } = req.body;
   const { id } = req.params;
   
@@ -63,7 +63,7 @@ router.patch('/users/:id/role', authenticate, authorize('ADMIN'), (req, res) => 
   return success(res, { success: true, role });
 });
 
-router.post('/matches/:id/override', authenticate, authorize('ADMIN'), async (req, res) => {
+router.post('/admin/matches/:id/override', authenticate, authorize('ADMIN'), async (req, res) => {
   const { action, ngo_id } = req.body;
   const { id } = req.params;
   
