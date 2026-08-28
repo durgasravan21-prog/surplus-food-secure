@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ROLES } from './config/constants';
 
@@ -23,6 +23,43 @@ import VerificationQueuePage from './pages/VerificationQueuePage';
 
 import './App.css';
 
+function VerificationPendingPage() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const displayName = user?.name || user?.email || 'User';
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: '20px', padding: '20px', textAlign: 'center', background: '#f8fafc' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '40px 32px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', maxWidth: '480px', width: '100%' }}>
+        <div style={{ width: '56px', height: '56px', background: '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <span style={{ fontSize: '24px' }}>⏳</span>
+        </div>
+        <h2 style={{ color: '#0f172a', fontSize: '24px', fontWeight: 700, margin: '0 0 12px' }}>Verification Pending</h2>
+        <p style={{ color: '#64748b', fontSize: '14px', lineHeight: '1.6', margin: '0 0 24px' }}>
+          Your account is currently being reviewed by our administrators. You will receive access once your submitted documents are verified.
+        </p>
+        <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '13px', color: '#64748b' }}>
+            Logged in as: <strong style={{ color: '#0f172a' }}>{displayName}</strong>
+          </span>
+          <button 
+            onClick={async () => {
+              await logout();
+              navigate('/login');
+            }}
+            style={{ padding: '10px 20px', background: '#dc2626', border: 'none', borderRadius: '6px', fontSize: '13px', color: '#ffffff', fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s', width: '100%' }}
+            onMouseOver={(e) => e.target.style.background = '#b91c1c'}
+            onMouseOut={(e) => e.target.style.background = '#dc2626'}
+          >
+            Sign Out / Switch Account
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RoleDashboard() {
   return <DonorDashboard />;
 }
@@ -43,10 +80,7 @@ function App() {
           } />
           <Route path="/verification-pending" element={
             <ProtectedRoute>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: '16px' }}>
-                <h2 style={{ color: '#0f172a' }}>Verification Pending</h2>
-                <p style={{ color: '#64748b' }}>Your account is being reviewed. You will be notified once approved.</p>
-              </div>
+              <VerificationPendingPage />
             </ProtectedRoute>
           } />
 
