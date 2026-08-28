@@ -19,12 +19,13 @@
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 }
 
 .stitch-brand {
@@ -34,49 +35,80 @@
 }
 
 .brand-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #15803d;
 }
 
 .brand-name {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.5px;
 }
 
-.brand-subtitle {
-  font-size: 12px;
-  color: #64748b;
-  padding-left: 8px;
-  border-left: 1px solid #e2e8f0;
+.brand-badge-stitch {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 3px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
 }
 
-/* Demo Role Switcher Bar */
+.topbar-search-box {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  width: 260px;
+  gap: 8px;
+}
+
+.search-icon {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.topbar-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12px;
+  color: #0f172a;
+  width: 100%;
+}
+
+/* Demo Role Switcher */
 .demo-role-switcher {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: #f1f5f9;
-  padding: 4px 8px;
+  padding: 4px 6px;
   border-radius: 9999px;
   border: 1px solid #e2e8f0;
 }
 
 .demo-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   color: #64748b;
   letter-spacing: 0.5px;
-  padding-left: 6px;
+  padding-left: 8px;
 }
 
 .role-pills {
   display: flex;
-  gap: 4px;
+  gap: 3px;
 }
 
 .role-pill {
@@ -99,51 +131,63 @@
 .role-pill.active {
   background: #0f172a;
   color: #ffffff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.15);
 }
 
 /* Topbar Right Profile */
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 }
 
-.status-chip {
+.system-indicator {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  color: #15803d;
+  background: #f0fdf4;
   padding: 4px 10px;
   border-radius: 9999px;
+  border: 1px solid #bbf7d0;
 }
 
-.status-chip.verified {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.chip-dot {
+.indicator-pulse {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #16a34a;
 }
 
-.user-profile {
+.user-profile-widget {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .profile-name {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0f172a;
 }
 
-.topbar-logout {
+.profile-role-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.topbar-signout-btn {
   padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid #cbd5e1;
@@ -155,9 +199,8 @@
   transition: all 0.15s;
 }
 
-.topbar-logout:hover {
+.topbar-signout-btn:hover {
   background: #f1f5f9;
-  border-color: #94a3b8;
   color: #0f172a;
 }
 
@@ -169,34 +212,61 @@
 
 /* Sidebar */
 .stitch-sidebar {
-  width: 230px;
+  width: 250px;
   background: #ffffff;
   border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  padding: 20px 16px;
   min-height: calc(100vh - 64px);
 }
 
+.sidebar-persona-badge {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 20px;
+}
+
+.persona-type {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  display: block;
+}
+
+.persona-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+.nav-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .sidebar-section-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #94a3b8;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   padding-left: 8px;
 }
 
-.stitch-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
 .stitch-nav-item {
-  padding: 9px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
   border-radius: 6px;
   color: #475569;
   font-size: 13px;
@@ -211,9 +281,23 @@
 }
 
 .stitch-nav-item.active {
-  background: #f0fdf4;
-  color: #15803d;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.nav-count-badge {
+  background: #15803d;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10px;
   font-weight: 700;
+}
+
+.stitch-nav-item.active .nav-count-badge {
+  background: #ffffff;
+  color: #0f172a;
 }
 
 .sidebar-bottom-info {
@@ -229,16 +313,25 @@
 }
 
 .info-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
+  text-transform: uppercase;
   color: #0f172a;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+}
+
+.info-stats-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #475569;
+  margin-bottom: 6px;
 }
 
 .info-desc {
-  font-size: 11px;
-  color: #64748b;
-  line-height: 1.4;
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.3;
 }
 
 /* Main Content Area */
@@ -248,8 +341,8 @@
   max-width: 1200px;
 }
 
-@media (max-width: 900px) {
-  .demo-role-switcher {
+@media (max-width: 1024px) {
+  .topbar-search-box {
     display: none;
   }
 }

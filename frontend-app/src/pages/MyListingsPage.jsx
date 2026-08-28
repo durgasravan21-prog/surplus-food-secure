@@ -1,127 +1,147 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listingsService } from '../services/listings';
-import { LISTING_STATUS } from '../config/constants';
+import { useAuth } from '../context/AuthContext';
+import { useDemoData } from '../context/DemoDataContext';
+import { LISTING_STATUS, ROLES } from '../config/constants';
 
 export default function MyListingsPage() {
-  const [listings, setListings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { listings } = useDemoData();
   const [filter, setFilter] = useState('');
 
-  useEffect(() => {
-    const params = filter ? { status: filter } : {};
-    listingsService.getMine(params)
-      .then((res) => setListings(res.data || []))
-      .catch(() => setListings([]))
-      .finally(() => setLoading(false));
-  }, [filter]);
+  // Filter listings based on active persona
+  const userListings = listings.filter((l) =>
+    user?.role === ROLES.INDIVIDUAL_DONOR ? l.donor_role === ROLES.INDIVIDUAL_DONOR : l.donor_role === ROLES.RESTAURANT
+  );
 
-  const handleCancel = async (id) => {
-    const reason = prompt('Please provide a reason for cancellation:');
-    if (!reason) return;
-    try {
-      await listingsService.cancel(id, reason);
-      setListings((prev) => prev.map((l) => l.listing_id === id ? { ...l, status: 'CANCELLED' } : l));
-    } catch (err) {
-      alert(err.response?.data?.error?.message || 'Failed to cancel listing.');
+  const filteredListings = userListings.filter((l) => (filter ? l.status === filter : true));
+
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case LISTING_STATUS.LISTED: return 'chip-blue';
+      case LISTING_STATUS.MATCHED_PENDING_NGO_ACCEPT: return 'chip-amber';
+      case LISTING_STATUS.NGO_ACCEPTED: return 'chip-teal';
+      case LISTING_STATUS.DELIVERY_ASSIGNED: return 'chip-purple';
+      case LISTING_STATUS.PICKED_UP: return 'chip-indigo';
+      case LISTING_STATUS.DELIVERED: return 'chip-green';
+      default: return 'chip-gray';
     }
   };
 
-  const statusClass = (status) => {
-    const classes = {
-      LISTED: 'badge-blue',
-      MATCHED_PENDING_NGO_ACCEPT: 'badge-amber',
-      NGO_ACCEPTED: 'badge-green',
-      DELIVERY_ASSIGNED: 'badge-purple',
-      PICKED_UP: 'badge-teal',
-      DELIVERED: 'badge-green-solid',
-      EXPIRED: 'badge-neutral',
-      CANCELLED: 'badge-red',
-    };
-    return classes[status] || 'badge-neutral';
-  };
-
-  if (loading) return <div className="loading">Loading listings...</div>;
-
   return (
-    <div style={{ maxWidth: '1100px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, color: '#0f172a' }}>My Listings</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>Track status and dispatch lifecycle for all your published listings</p>
+    <div className="stitch-dashboard">
+      <div className="dashboard-banner">
+        <div className="banner-text">
+          <span className="banner-eyebrow">Dispatch Records</span>
+          <h1>My Food Rescue Listings</h1>
+          <p>Complete lifecycle history of all declared surplus meals and real-time delivery status tracking.</p>
         </div>
-        <Link to="/dashboard/listings/new" style={{ padding: '10px 16px', background: '#15803d', color: '#ffffff', borderRadius: '6px', fontWeight: 600, fontSize: '13px' }}>
-          Create Listing
-        </Link>
+        <div className="banner-actions">
+          <Link to="/dashboard/listings/new" className="stitch-btn-primary">
+            + Declare New Surplus
+          </Link>
+        </div>
       </div>
 
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setFilter('')}
-          style={{
-            padding: '6px 14px',
-            borderRadius: '4px',
-            border: !filter ? '1px solid #15803d' : '1px solid #cbd5e1',
-            background: !filter ? '#15803d' : '#ffffff',
-            color: !filter ? '#ffffff' : '#475569',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: 600
-          }}
-        >
-          All
-        </button>
-        {Object.values(LISTING_STATUS).map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '4px',
-              border: filter === s ? '1px solid #15803d' : '1px solid #cbd5e1',
-              background: filter === s ? '#15803d' : '#ffffff',
-              color: filter === s ? '#ffffff' : '#475569',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 600
-            }}
-          >
-            {s.replace(/_/g, ' ')}
-          </button>
-        ))}
-      </div>
+      <div className="stitch-section-card">
+        <div className="section-card-header">
+          <div>
+            <h2>Listings History ({userListings.length})</h2>
+            <p>Filter by state machine status</p>
+          </div>
 
-      {listings.length === 0 ? (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '48px', textAlign: 'center', color: '#64748b' }}>
-          No listings found under the selected filter.
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setFilter('')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '9999px',
+                border: !filter ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                background: !filter ? '#0f172a' : '#ffffff',
+                color: !filter ? '#ffffff' : '#475569',
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontWeight: 600,
+              }}
+            >
+              All Statuses
+            </button>
+            {Object.values(LISTING_STATUS).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setFilter(s)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '9999px',
+                  border: filter === s ? '1px solid #0f172a' : '1px solid #e2e8f0',
+                  background: filter === s ? '#0f172a' : '#ffffff',
+                  color: filter === s ? '#ffffff' : '#475569',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                }}
+              >
+                {s.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {listings.map((l) => (
-            <div key={l.listing_id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#0f172a' }}>{l.food_type}</strong>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0' }}>
-                  {l.quantity_meals} meals · Best before: {new Date(l.best_before_at).toLocaleString()}
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <span className={`status-badge ${statusClass(l.status)}`}>
-                  {l.status.replace(/_/g, ' ')}
-                </span>
-                {!['DELIVERED', 'EXPIRED', 'CANCELLED'].includes(l.status) && (
-                  <button
-                    onClick={() => handleCancel(l.listing_id)}
-                    style={{ padding: '6px 12px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#dc2626', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+
+        <div className="stitch-table-wrapper">
+          <table className="stitch-table">
+            <thead>
+              <tr>
+                <th>Food Description</th>
+                <th>Quantity</th>
+                <th>Perishability</th>
+                <th>Best Before</th>
+                <th>Assigned Destination</th>
+                <th>Dispatch Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredListings.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
+                    No listings match the selected filter.
+                  </td>
+                </tr>
+              ) : (
+                filteredListings.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <div className="item-title">{item.food_type}</div>
+                      <div className="item-id">ID: {item.id} · Created {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </td>
+                    <td>
+                      <span className="qty-highlight">{item.quantity_meals} meals</span>
+                    </td>
+                    <td>
+                      <span className="perish-tag">
+                        {item.perishability === 'HIGHLY_PERISHABLE' ? 'Urgent (<6 hrs)' : 'Moderate'}
+                      </span>
+                    </td>
+                    <td>{new Date(item.best_before_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td>
+                      <span className="entity-name">{item.matched_ngo_name || 'Searching AI Pool...'}</span>
+                      {item.assigned_partner_name && (
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>Rider: {item.assigned_partner_name}</div>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`status-pill ${getStatusBadgeClass(item.status)}`}>
+                        {item.status.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 }

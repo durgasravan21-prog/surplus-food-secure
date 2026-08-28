@@ -1,20 +1,29 @@
 import { useState } from 'react';
+import { useDemoData } from '../context/DemoDataContext';
 
 const STEPS = [
-  { key: 'DELIVERY_ASSIGNED', label: '1. Assigned', desc: 'Navigate to pickup kitchen' },
-  { key: 'PARTNER_ARRIVED_PICKUP', label: '2. Arrived', desc: 'Inspect food packaging' },
+  { key: 'DELIVERY_ASSIGNED', label: '1. Assigned', desc: 'Navigate to donor kitchen' },
+  { key: 'PARTNER_ARRIVED_PICKUP', label: '2. Arrived', desc: 'Inspect packaging & seal' },
   { key: 'PICKED_UP', label: '3. Picked Up', desc: 'En route to NGO dropoff' },
   { key: 'DELIVERED', label: '4. Delivered', desc: 'Confirmed by NGO receiving team' },
 ];
 
 export default function ActiveDeliveryPage() {
+  const { activeDelivery, updateDeliveryStatus } = useDemoData();
   const [currentStepIndex, setCurrentStepIndex] = useState(1);
   const [pickupPhotoUploaded, setPickupPhotoUploaded] = useState(false);
   const [dropoffPhotoUploaded, setDropoffPhotoUploaded] = useState(false);
 
   const handleNextStep = () => {
-    if (currentStepIndex < STEPS.length - 1) {
-      setCurrentStepIndex((prev) => prev + 1);
+    if (currentStepIndex === 0) {
+      updateDeliveryStatus('PARTNER_ARRIVED_PICKUP');
+      setCurrentStepIndex(1);
+    } else if (currentStepIndex === 1) {
+      updateDeliveryStatus('PICKED_UP', 's3://proofs/pickup_verified_photo.jpg');
+      setCurrentStepIndex(2);
+    } else if (currentStepIndex === 2) {
+      updateDeliveryStatus('DELIVERED', 's3://proofs/dropoff_verified_photo.jpg');
+      setCurrentStepIndex(3);
     }
   };
 
@@ -24,7 +33,9 @@ export default function ActiveDeliveryPage() {
         <div className="banner-text">
           <span className="banner-eyebrow">Active Chain of Custody</span>
           <h1>Live Delivery Stepper</h1>
-          <p>Order ID: DL-8892 · 45 Meals from Saffron Grand to Anna Seva Trust</p>
+          <p>
+            Order ID: {activeDelivery.id} · {activeDelivery.quantity_meals} Meals from {activeDelivery.donor_kitchen} to {activeDelivery.dropoff_ngo}
+          </p>
         </div>
       </div>
 
@@ -59,9 +70,9 @@ export default function ActiveDeliveryPage() {
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px' }}>
           {currentStepIndex === 0 && (
             <div>
-              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 1: Heading to Donor Kitchen</h3>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 1: En Route to Donor Kitchen</h3>
               <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-                Pickup Address: Saffron Grand Commercial Kitchen, 80ft Road, Koramangala.
+                Pickup Address: {activeDelivery.pickup_address} (Distance: {activeDelivery.distance_km} km)
               </p>
               <button
                 type="button"
@@ -75,9 +86,9 @@ export default function ActiveDeliveryPage() {
 
           {currentStepIndex === 1 && (
             <div>
-              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 2: Food Pickup & Safety Inspection</h3>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 2: Food Pickup & Container Inspection</h3>
               <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-                Verify package sealing and upload a quick photo of the food containers.
+                Verify package integrity and upload a photo of the packed meals before leaving.
               </p>
               <div style={{ marginBottom: '16px' }}>
                 <input
@@ -88,7 +99,7 @@ export default function ActiveDeliveryPage() {
                 />
                 {pickupPhotoUploaded && (
                   <span style={{ marginLeft: '12px', fontSize: '12px', fontWeight: 700, color: '#15803d' }}>
-                    Photo Verified (EXIF Stripped)
+                    Pickup Proof Captured (EXIF metadata stripped)
                   </span>
                 )}
               </div>
@@ -106,7 +117,7 @@ export default function ActiveDeliveryPage() {
                   cursor: pickupPhotoUploaded ? 'pointer' : 'not-allowed'
                 }}
               >
-                Confirm Pickup & Start Navigation
+                Confirm Pickup & Start Navigation to NGO
               </button>
             </div>
           )}
@@ -115,7 +126,7 @@ export default function ActiveDeliveryPage() {
             <div>
               <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 3: En Route to NGO Shelter</h3>
               <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-                Dropoff Address: Anna Seva Trust, 12th Main Road, Indira Nagar (Estimated 12 mins).
+                Dropoff Address: {activeDelivery.dropoff_address}
               </p>
               <button
                 type="button"
@@ -129,9 +140,9 @@ export default function ActiveDeliveryPage() {
 
           {currentStepIndex === 3 && (
             <div>
-              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 4: Dropoff Confirmation</h3>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 4: Dropoff Confirmation & Proof</h3>
               <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-                Upload dropoff proof photo and obtain recipient handover confirmation.
+                Upload final dropoff handover photo to complete the chain of custody.
               </p>
               <div style={{ marginBottom: '16px' }}>
                 <input
@@ -142,13 +153,16 @@ export default function ActiveDeliveryPage() {
                 />
                 {dropoffPhotoUploaded && (
                   <span style={{ marginLeft: '12px', fontSize: '12px', fontWeight: 700, color: '#15803d' }}>
-                    Dropoff Photo Recorded
+                    Dropoff Proof Photo Recorded
                   </span>
                 )}
               </div>
               <button
                 type="button"
-                onClick={() => alert('Delivery Successfully Completed!')}
+                onClick={() => {
+                  updateDeliveryStatus('DELIVERED', 's3://proofs/dropoff_photo.jpg');
+                  alert('🎉 Delivery Complete! Food rescue recorded in global environmental ledger.');
+                }}
                 disabled={!dropoffPhotoUploaded}
                 style={{
                   padding: '12px 24px',
@@ -160,7 +174,7 @@ export default function ActiveDeliveryPage() {
                   cursor: dropoffPhotoUploaded ? 'pointer' : 'not-allowed'
                 }}
               >
-                Close Delivery & Record Impact
+                Close Delivery & Record Carbon Offset
               </button>
             </div>
           )}

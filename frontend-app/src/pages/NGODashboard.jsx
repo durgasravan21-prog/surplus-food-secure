@@ -1,41 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { matchingService } from '../services/matching';
-import { statsService } from '../services/stats';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useDemoData } from '../context/DemoDataContext';
+import { LISTING_STATUS } from '../config/constants';
 import { useCountdown } from '../hooks/useCountdown';
 import './NGODashboard.css';
 
-const DEFAULT_DEMO_MATCHES = [
-  {
-    match_id: 'm-901',
-    listing_id: 'lst-101',
-    donor_name: 'Saffron Grand Commercial Kitchen',
-    food_type: 'Cooked Basmati Rice + Dal Makhani + Mixed Veg',
-    quantity_meals: 45,
-    distance_km: 1.85,
-    perishability: 'HIGHLY_PERISHABLE',
-    best_before_at: new Date(Date.now() + 3.5 * 3600 * 1000).toISOString(),
-    expires_at: new Date(Date.now() + 8 * 60 * 1000).toISOString(),
-    status: 'PENDING',
-  },
-  {
-    match_id: 'm-902',
-    listing_id: 'lst-104',
-    donor_name: 'The Orchid Convention Center',
-    food_type: 'Assorted Buffet Platters & Flatbreads',
-    quantity_meals: 60,
-    distance_km: 3.2,
-    perishability: 'HIGHLY_PERISHABLE',
-    best_before_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
-    expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-    status: 'PENDING',
-  },
-];
-
 function MatchCard({ match, onAccept, onDecline }) {
-  const timeLeft = useCountdown(match.expires_at);
+  const timeLeft = useCountdown(match.expires_at || new Date(Date.now() + 8 * 60 * 1000));
   const isExpired = timeLeft.total <= 0;
 
   return (
@@ -45,7 +16,7 @@ function MatchCard({ match, onAccept, onDecline }) {
           <span className="match-donor">{match.donor_name || 'Verified Commercial Donor'}</span>
           <h3 className="match-food">{match.food_type}</h3>
         </div>
-        <span className="distance-badge">{match.distance_km} km away</span>
+        <span className="distance-badge">{match.distance_km || '1.85'} km away</span>
       </div>
 
       <div className="match-specs">
@@ -55,18 +26,22 @@ function MatchCard({ match, onAccept, onDecline }) {
         </div>
         <div className="spec-box">
           <span className="spec-label">Perishability</span>
-          <span className="spec-value">{match.perishability === 'HIGHLY_PERISHABLE' ? 'Cooked (Urgent)' : 'Moderate'}</span>
+          <span className="spec-value">
+            {match.perishability === 'HIGHLY_PERISHABLE' ? 'Cooked (Urgent)' : 'Moderate'}
+          </span>
         </div>
         <div className="spec-box">
           <span className="spec-label">Best Before</span>
-          <span className="spec-value">{new Date(match.best_before_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="spec-value">
+            {new Date(match.best_before_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
       </div>
 
       {!isExpired ? (
         <div className="match-countdown-bar">
           <div className="countdown-info">
-            <span>Offer Acceptance Window</span>
+            <span>Offer Acceptance Lock</span>
             <strong>{timeLeft.minutes}m {timeLeft.seconds}s remaining</strong>
           </div>
           <div className="countdown-progress">
@@ -84,15 +59,15 @@ function MatchCard({ match, onAccept, onDecline }) {
         <button
           type="button"
           className="btn-accept"
-          onClick={() => onAccept(match.match_id)}
+          onClick={() => onAccept(match.id)}
           disabled={isExpired}
         >
-          Accept Match & Auto-Assign Delivery
+          Accept Match & Auto-Assign Delivery Partner
         </button>
         <button
           type="button"
           className="btn-decline"
-          onClick={() => onDecline(match.match_id)}
+          onClick={() => onDecline(match.id)}
           disabled={isExpired}
         >
           Decline
@@ -104,45 +79,20 @@ function MatchCard({ match, onAccept, onDecline }) {
 
 export default function NGODashboard() {
   const { user } = useAuth();
-  const [autoMatch, setAutoMatch] = useState(true);
-  const [matches, setMatches] = useState(DEFAULT_DEMO_MATCHES);
-  const [capacity, setCapacity] = useState({
-    daily_total: 150,
-    daily_claimed: 65,
-    remaining: 85,
-  });
+  const { listings, ngoCapacity, acceptNgoMatch, declineNgoMatch, toggleAutoMatch } = useDemoData();
 
-  const handleToggleAutoMatch = async () => {
-    try {
-      await matchingService.toggleAutoMatch(!autoMatch);
-      setAutoMatch(!autoMatch);
-    } catch {
-      setAutoMatch(!autoMatch);
-    }
+  // Active match offers offered to this NGO
+  const pendingMatches = listings.filter(
+    (l) => l.status === LISTING_STATUS.MATCHED_PENDING_NGO_ACCEPT
+  );
+
+  const handleAccept = (id) => {
+    acceptNgoMatch(id);
+    alert('Match Accepted! Row-level lock acquired and Delivery Partner auto-assigned.');
   };
 
-  const handleAccept = async (id) => {
-    try {
-      await matchingService.accept(id);
-    } catch {
-      // simulate for demo
-    }
-    setMatches((prev) => prev.filter((m) => m.match_id !== id));
-    setCapacity((prev) => ({
-      ...prev,
-      daily_claimed: prev.daily_claimed + 45,
-      remaining: Math.max(0, prev.remaining - 45),
-    }));
-    alert('Match Accepted! Delivery Partner auto-assignment job enqueued.');
-  };
-
-  const handleDecline = async (id) => {
-    try {
-      await matchingService.decline(id);
-    } catch {
-      // simulate for demo
-    }
-    setMatches((prev) => prev.filter((m) => m.match_id !== id));
+  const handleDecline = (id) => {
+    declineNgoMatch(id);
   };
 
   return (
@@ -152,17 +102,20 @@ export default function NGODashboard() {
         <div className="control-left">
           <span className="control-eyebrow">NGO Operations & Intake</span>
           <h1>{user?.org_name || 'Anna Seva Trust Food Bank'}</h1>
-          <p>Declared Service Radius: 7.0 km | Operating Hours: 08:00 – 21:00</p>
+          <p>Declared Service Radius: 7.0 km | Daily Capacity Budget: {ngoCapacity.daily_capacity} meals</p>
         </div>
 
         <div className="control-right">
           <div className="toggle-container">
             <span className="toggle-title">AI Auto-Match</span>
-            <div className={`stitch-switch ${autoMatch ? 'active' : ''}`} onClick={handleToggleAutoMatch}>
+            <div
+              className={`stitch-switch ${ngoCapacity.auto_match_enabled ? 'active' : ''}`}
+              onClick={toggleAutoMatch}
+            >
               <div className="switch-thumb" />
             </div>
-            <span className={`switch-status ${autoMatch ? 'on' : 'off'}`}>
-              {autoMatch ? 'Active (Receiving Matches)' : 'Paused'}
+            <span className={`switch-status ${ngoCapacity.auto_match_enabled ? 'on' : 'off'}`}>
+              {ngoCapacity.auto_match_enabled ? 'Active (Receiving Matches)' : 'Paused'}
             </span>
           </div>
         </div>
@@ -171,26 +124,32 @@ export default function NGODashboard() {
       {/* Capacity & Queue Metrics */}
       <div className="stitch-metrics-grid">
         <div className="stitch-metric-card">
-          <span className="metric-label">Daily Capacity Budget</span>
-          <div className="metric-number">{capacity.daily_claimed} <span className="unit">/ {capacity.daily_total} meals</span></div>
+          <span className="metric-label">Daily Capacity Meter</span>
+          <div className="metric-number">
+            {ngoCapacity.daily_claimed} <span className="unit">/ {ngoCapacity.daily_capacity} meals</span>
+          </div>
           <div className="capacity-bar-track">
             <div
               className="capacity-bar-fill"
-              style={{ width: `${(capacity.daily_claimed / capacity.daily_total) * 100}%` }}
+              style={{
+                width: `${Math.min(100, (ngoCapacity.daily_claimed / ngoCapacity.daily_capacity) * 100)}%`,
+              }}
             />
           </div>
-          <span className="metric-footnote">{capacity.remaining} meals remaining capacity today</span>
+          <span className="metric-footnote">{ngoCapacity.remaining} meals remaining in today's intake budget</span>
         </div>
 
         <div className="stitch-metric-card">
           <span className="metric-label">Pending AI Match Offers</span>
-          <div className="metric-number">{matches.length}</div>
-          <span className="metric-footnote">Direct offers reserved in 10-min window</span>
+          <div className="metric-number">{pendingMatches.length}</div>
+          <span className="metric-footnote">Reserved exclusively for 10 minutes</span>
         </div>
 
         <div className="stitch-metric-card">
-          <span className="metric-label">Public Browse Board</span>
-          <div className="metric-number">3 <span className="unit">available</span></div>
+          <span className="metric-label">Public Claim Board</span>
+          <div className="metric-number">
+            {listings.filter((l) => l.status === LISTING_STATUS.LISTED).length} <span className="unit">available</span>
+          </div>
           <span className="metric-footnote">
             <Link to="/dashboard/board" style={{ color: '#15803d', fontWeight: 600 }}>
               Browse unassigned listings →
@@ -204,19 +163,21 @@ export default function NGODashboard() {
         <div className="section-card-header">
           <div>
             <h2>Incoming Match Offers Inbox</h2>
-            <p>High-priority food rescue matches offered directly to your organization</p>
+            <p>Direct distance-first AI match offers sent to your organization</p>
           </div>
         </div>
 
         <div className="match-cards-container">
-          {matches.length === 0 ? (
+          {pendingMatches.length === 0 ? (
             <div className="empty-inbox">
               <div className="empty-title">All match offers reviewed</div>
-              <p>When new surplus food within your 7km radius is listed, it will appear here automatically.</p>
+              <p>
+                When new surplus food within your declared 7km radius is published, it will trigger an automated match offer here.
+              </p>
             </div>
           ) : (
-            matches.map((m) => (
-              <MatchCard key={m.match_id} match={m} onAccept={handleAccept} onDecline={handleDecline} />
+            pendingMatches.map((m) => (
+              <MatchCard key={m.id} match={m} onAccept={handleAccept} onDecline={handleDecline} />
             ))
           )}
         </div>
