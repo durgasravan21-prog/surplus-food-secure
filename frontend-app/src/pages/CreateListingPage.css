@@ -1,0 +1,15 @@
+.create-listing { max-width: 640px; }
+.create-listing h1 { margin: 0 0 24px; font-size: 24px; }
+.form-error { background: #f8d7da; color: #721c24; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+.listing-form { display: flex; flex-direction: column; gap: 16px; }
+.listing-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #555; }
+.listing-form input, .listing-form select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+.listing-form input:focus, .listing-form select:focus { outline: none; border-color: #0f9b58; box-shadow: 0 0 0 3px rgba(15,155,88,0.1); }
+.form-row, .location-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+.location-row { grid-template-columns: 1fr 1fr auto; }
+.location-btn { padding: 12px 16px; background: #e3f2fd; color: #1a73e8; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; white-space: nowrap; }
+.checkbox-label { flex-direction: row !important; align-items: flex-start; gap: 10px; padding: 16px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffc107; }
+.checkbox-label input { margin-top: 3px; }
+.submit-btn { padding: 14px; background: #0f9b58; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.submit-btn:hover:not(:disabled) { background: #0d8a4e; }
+.submit-btn:disabled { background: #ccc; cursor: not-allowed; }
