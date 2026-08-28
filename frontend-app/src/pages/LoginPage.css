@@ -3,38 +3,46 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0f9b58 0%, #1a73e8 100%);
-  padding: 20px;
+  background-color: #f1f5f9;
+  padding: 24px;
 }
 
 .login-card {
-  background: white;
-  border-radius: 16px;
-  padding: 48px 40px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 44px 36px;
   max-width: 440px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  text-align: center;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.brand-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #dcfce7;
+  color: #166534;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
 }
 
 .login-logo {
-  font-size: 36px;
-  margin: 0 0 8px;
-  color: #1a1a1a;
-}
-
-.login-tagline {
-  font-size: 14px;
-  color: #0f9b58;
-  font-weight: 600;
-  margin: 0 0 16px;
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 10px;
+  color: #0f172a;
+  letter-spacing: -0.5px;
 }
 
 .login-description {
   font-size: 14px;
-  color: #666;
+  color: #64748b;
   line-height: 1.5;
-  margin: 0 0 32px;
+  margin: 0 0 28px;
 }
 
 .google-login-btn {
@@ -43,28 +51,29 @@
   justify-content: center;
   gap: 12px;
   width: 100%;
-  padding: 14px 24px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  background: white;
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
+  padding: 12px 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease-in-out;
 }
 
 .google-login-btn:hover {
-  border-color: #1a73e8;
-  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.15);
+  background: #f8fafc;
+  border-color: #94a3b8;
 }
 
 .login-features {
   margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  text-align: left;
 }
 
 .feature {
@@ -72,5 +81,13 @@
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #555;
+  color: #475569;
+}
+
+.feature-bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #15803d;
+  flex-shrink: 0;
 }

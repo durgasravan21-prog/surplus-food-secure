@@ -27,41 +27,95 @@ export default function MyListingsPage() {
     }
   };
 
-  const statusColor = (status) => {
-    const colors = { LISTED: '#1a73e8', MATCHED_PENDING_NGO_ACCEPT: '#ff9800', NGO_ACCEPTED: '#0f9b58', DELIVERY_ASSIGNED: '#9c27b0', PICKED_UP: '#00bcd4', DELIVERED: '#4caf50', EXPIRED: '#9e9e9e', CANCELLED: '#f44336' };
-    return colors[status] || '#666';
+  const statusClass = (status) => {
+    const classes = {
+      LISTED: 'badge-blue',
+      MATCHED_PENDING_NGO_ACCEPT: 'badge-amber',
+      NGO_ACCEPTED: 'badge-green',
+      DELIVERY_ASSIGNED: 'badge-purple',
+      PICKED_UP: 'badge-teal',
+      DELIVERED: 'badge-green-solid',
+      EXPIRED: 'badge-neutral',
+      CANCELLED: 'badge-red',
+    };
+    return classes[status] || 'badge-neutral';
   };
 
   if (loading) return <div className="loading">Loading listings...</div>;
 
   return (
-    <div>
+    <div style={{ maxWidth: '1100px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '24px', margin: 0 }}>My Listings</h1>
-        <Link to="/dashboard/listings/new" style={{ padding: '10px 20px', background: '#0f9b58', color: 'white', borderRadius: '8px', fontWeight: 600, fontSize: '14px' }}>
-          + New Listing
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, color: '#0f172a' }}>My Listings</h1>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>Track status and dispatch lifecycle for all your published listings</p>
+        </div>
+        <Link to="/dashboard/listings/new" style={{ padding: '10px 16px', background: '#15803d', color: '#ffffff', borderRadius: '6px', fontWeight: 600, fontSize: '13px' }}>
+          Create Listing
         </Link>
       </div>
-      <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        <button onClick={() => setFilter('')} style={{ padding: '6px 14px', borderRadius: '20px', border: !filter ? '2px solid #0f9b58' : '1px solid #ddd', background: !filter ? '#e8f5e9' : 'white', cursor: 'pointer', fontSize: '12px' }}>All</button>
+
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => setFilter('')}
+          style={{
+            padding: '6px 14px',
+            borderRadius: '4px',
+            border: !filter ? '1px solid #15803d' : '1px solid #cbd5e1',
+            background: !filter ? '#15803d' : '#ffffff',
+            color: !filter ? '#ffffff' : '#475569',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: 600
+          }}
+        >
+          All
+        </button>
         {Object.values(LISTING_STATUS).map((s) => (
-          <button key={s} onClick={() => setFilter(s)} style={{ padding: '6px 14px', borderRadius: '20px', border: filter === s ? '2px solid #0f9b58' : '1px solid #ddd', background: filter === s ? '#e8f5e9' : 'white', cursor: 'pointer', fontSize: '12px' }}>{s.replace(/_/g, ' ')}</button>
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '4px',
+              border: filter === s ? '1px solid #15803d' : '1px solid #cbd5e1',
+              background: filter === s ? '#15803d' : '#ffffff',
+              color: filter === s ? '#ffffff' : '#475569',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600
+            }}
+          >
+            {s.replace(/_/g, ' ')}
+          </button>
         ))}
       </div>
+
       {listings.length === 0 ? (
-        <div className="empty-state" style={{ background: 'white', borderRadius: '12px', padding: '40px', textAlign: 'center', color: '#888' }}>No listings found.</div>
+        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '48px', textAlign: 'center', color: '#64748b' }}>
+          No listings found under the selected filter.
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {listings.map((l) => (
-            <div key={l.listing_id} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={l.listing_id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <strong>{l.food_type}</strong>
-                <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0' }}>{l.quantity_meals} meals · Best before: {new Date(l.best_before_at).toLocaleString()}</p>
+                <strong style={{ fontSize: '15px', color: '#0f172a' }}>{l.food_type}</strong>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0' }}>
+                  {l.quantity_meals} meals · Best before: {new Date(l.best_before_at).toLocaleString()}
+                </p>
               </div>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <span style={{ display: 'inline-block', padding: '4px 10px', borderRadius: '20px', background: statusColor(l.status), color: 'white', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>{l.status.replace(/_/g, ' ')}</span>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <span className={`status-badge ${statusClass(l.status)}`}>
+                  {l.status.replace(/_/g, ' ')}
+                </span>
                 {!['DELIVERED', 'EXPIRED', 'CANCELLED'].includes(l.status) && (
-                  <button onClick={() => handleCancel(l.listing_id)} style={{ padding: '6px 12px', background: 'white', border: '1px solid #f44336', color: '#f44336', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>Cancel</button>
+                  <button
+                    onClick={() => handleCancel(l.listing_id)}
+                    style={{ padding: '6px 12px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#dc2626', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                  >
+                    Cancel
+                  </button>
                 )}
               </div>
             </div>

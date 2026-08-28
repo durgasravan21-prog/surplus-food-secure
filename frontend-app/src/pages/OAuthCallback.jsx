@@ -25,15 +25,17 @@ export default function OAuthCallback() {
         }
       })
       .catch((err) => {
-        setError(err.response?.data?.error?.message || 'Login failed. Please try again.');
+        setError(err.response?.data?.error?.message || 'Authentication failed. Please try again.');
       });
   }, [searchParams, login, navigate]);
 
   if (error) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '16px' }}>
-        <p style={{ color: '#dc3545', fontSize: '16px' }}>❌ {error}</p>
-        <a href="/login" style={{ color: '#1a73e8' }}>Try again</a>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '16px', padding: '20px' }}>
+        <div style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#991b1b', padding: '12px 20px', borderRadius: '8px', fontSize: '14px' }}>
+          {error}
+        </div>
+        <a href="/login" style={{ color: '#15803d', fontWeight: 600 }}>Return to sign in</a>
       </div>
     );
   }
@@ -41,7 +43,7 @@ export default function OAuthCallback() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
       <div className="spinner" />
-      <p style={{ marginTop: '16px', color: '#666' }}>Signing you in...</p>
+      <p style={{ marginTop: '16px', color: '#64748b', fontSize: '14px' }}>Signing you in...</p>
     </div>
   );
 }

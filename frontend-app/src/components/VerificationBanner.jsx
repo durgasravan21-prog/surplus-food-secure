@@ -10,30 +10,30 @@ export default function VerificationBanner() {
   const statusConfig = {
     [VERIFICATION_STATUS.PENDING_VERIFICATION]: {
       className: 'banner-warning',
-      icon: '📋',
+      badge: 'Action Required',
       title: 'Verification Required',
-      message: 'Please submit your verification documents to start using Annayog.',
+      message: 'Please submit your verification documents to start publishing or receiving listings.',
       action: { label: 'Submit Documents', href: '/verification/submit' },
     },
     [VERIFICATION_STATUS.PENDING]: {
       className: 'banner-info',
-      icon: '⏳',
+      badge: 'In Review',
       title: 'Verification Pending',
-      message: 'Your documents are being reviewed. This usually takes 24-48 hours.',
+      message: 'Your documents are being reviewed by the platform administrators.',
       action: null,
     },
     [VERIFICATION_STATUS.REJECTED]: {
       className: 'banner-error',
-      icon: '❌',
+      badge: 'Rejected',
       title: 'Verification Rejected',
-      message: 'Your verification was rejected. Please review the feedback and resubmit.',
+      message: 'Your verification submission was rejected. Please review feedback and resubmit.',
       action: { label: 'Resubmit', href: '/verification/submit' },
     },
     [VERIFICATION_STATUS.RESUBMIT_REQUIRED]: {
       className: 'banner-warning',
-      icon: '🔄',
+      badge: 'Resubmit',
       title: 'Resubmission Required',
-      message: 'Additional information is needed for your verification.',
+      message: 'Additional information is required to complete your verification.',
       action: { label: 'Update Documents', href: '/verification/submit' },
     },
   };
@@ -43,7 +43,7 @@ export default function VerificationBanner() {
 
   return (
     <div className={`verification-banner ${config.className}`}>
-      <span className="banner-icon">{config.icon}</span>
+      <span className="banner-badge">{config.badge}</span>
       <div className="banner-content">
         <strong>{config.title}</strong>
         <p>{config.message}</p>

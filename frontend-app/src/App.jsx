@@ -44,8 +44,8 @@ function App() {
           <Route path="/verification-pending" element={
             <ProtectedRoute>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: '16px' }}>
-                <h2>⏳ Verification Pending</h2>
-                <p style={{ color: '#666' }}>Your account is being reviewed. You'll be notified once approved.</p>
+                <h2 style={{ color: '#0f172a' }}>Verification Pending</h2>
+                <p style={{ color: '#64748b' }}>Your account is being reviewed. You will be notified once approved.</p>
               </div>
             </ProtectedRoute>
           } />
@@ -106,9 +106,9 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/unauthorized" element={
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column' }}>
-              <h2>🚫 Unauthorized</h2>
-              <p style={{ color: '#666' }}>You don't have permission to access this page.</p>
-              <a href="/dashboard" style={{ color: '#1a73e8', marginTop: '12px' }}>Go to Dashboard</a>
+              <h2 style={{ color: '#0f172a' }}>Access Restricted</h2>
+              <p style={{ color: '#64748b' }}>You do not have permission to access this page.</p>
+              <a href="/dashboard" style={{ color: '#15803d', marginTop: '12px', fontWeight: 600 }}>Go to Dashboard</a>
             </div>
           } />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -12,24 +12,46 @@ export default function ImpactStatsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="loading">Loading impact stats...</div>;
+  if (loading) return <div className="loading">Loading impact statistics...</div>;
 
   return (
-    <div>
-      <h1 style={{ fontSize: '24px', margin: '0 0 8px' }}>🌱 Your Impact</h1>
-      <p style={{ color: '#888', fontSize: '13px', marginBottom: '24px' }}>Your contribution to reducing food waste.</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+    <div style={{ maxWidth: '1000px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, color: '#0f172a' }}>Environmental & Social Impact</h1>
+        <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>
+          Cumulative statistics on meals rescued, food diverted from landfills, and CO2 emissions prevented.
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
         {[
-          { value: stats?.meals_rescued ?? '—', label: 'Meals Rescued', icon: '🍽️', color: '#0f9b58' },
-          { value: stats?.kg_saved ? `${stats.kg_saved} kg` : '—', label: 'Food Saved', icon: '⚖️', color: '#1a73e8' },
-          { value: stats?.co2e_kg_estimate ? `${stats.co2e_kg_estimate} kg` : '—', label: 'CO₂e Prevented', icon: '🌍', color: '#00bcd4' },
-          { value: stats?.listings_delivered ?? '—', label: 'Deliveries Completed', icon: '✅', color: '#9c27b0' },
-          { value: stats?.listings_expired ?? '—', label: 'Listings Expired', icon: '⏰', color: '#f44336' },
+          { value: stats?.meals_rescued ?? '0', label: 'Meals Rescued', desc: 'Direct meals served to beneficiaries' },
+          { value: stats?.kg_saved ? `${stats.kg_saved} kg` : '0 kg', label: 'Food Waste Diverted', desc: 'Total mass of food preserved' },
+          { value: stats?.co2e_kg_estimate ? `${stats.co2e_kg_estimate} kg` : '0 kg', label: 'CO2e Prevented', desc: 'Methane & carbon emissions saved' },
+          { value: stats?.listings_delivered ?? '0', label: 'Completed Rescues', desc: 'Verified dropoff deliveries' },
+          { value: stats?.listings_expired ?? '0', label: 'Expired Listings', desc: 'Unmatched or timed out listings' },
         ].map((s) => (
-          <div key={s.label} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: `4px solid ${s.color}` }}>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>{s.icon}</div>
-            <div style={{ fontSize: '28px', fontWeight: 700 }}>{s.value}</div>
-            <div style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>{s.label}</div>
+          <div
+            key={s.label}
+            style={{
+              background: '#ffffff',
+              borderRadius: '8px',
+              padding: '24px',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}
+          >
+            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b' }}>
+              {s.label}
+            </div>
+            <div style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>
+              {s.value}
+            </div>
+            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+              {s.desc}
+            </div>
           </div>
         ))}
       </div>

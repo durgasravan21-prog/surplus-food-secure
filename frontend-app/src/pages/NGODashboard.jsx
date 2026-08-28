@@ -7,27 +7,43 @@ import { useCountdown } from '../hooks/useCountdown';
 import './NGODashboard.css';
 
 function MatchCard({ match, onAccept, onDecline }) {
-  const { timeLeft } = useCountdown(match.expires_at);
+  const timeLeft = useCountdown(match.expires_at);
   const isExpired = timeLeft.total <= 0;
 
   return (
     <div className={`match-card ${isExpired ? 'expired' : ''}`}>
       <div className="match-header">
-        <h3>{match.food_type}</h3>
+        <div>
+          <span className="match-tag">Auto Match Offer</span>
+          <h3>{match.food_type}</h3>
+        </div>
         <span className="match-distance">{match.distance_km} km away</span>
       </div>
+
       <div className="match-details">
-        <span>🍽️ {match.quantity_meals} meals</span>
-        <span>⏰ Best before: {new Date(match.best_before_at).toLocaleTimeString()}</span>
+        <div className="detail-item">
+          <span className="detail-label">Quantity:</span>
+          <span>{match.quantity_meals} meals</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Best Before:</span>
+          <span>{new Date(match.best_before_at).toLocaleTimeString()}</span>
+        </div>
       </div>
+
       {!isExpired && (
         <div className="match-timer">
-          ⏳ {timeLeft.minutes}m {timeLeft.seconds}s remaining
+          Offer expires in: <strong>{timeLeft.minutes}m {timeLeft.seconds}s</strong>
         </div>
       )}
+
       <div className="match-actions">
-        <button className="accept-btn" onClick={() => onAccept(match.match_id)} disabled={isExpired}>Accept</button>
-        <button className="decline-btn" onClick={() => onDecline(match.match_id)} disabled={isExpired}>Decline</button>
+        <button className="accept-btn" onClick={() => onAccept(match.match_id)} disabled={isExpired}>
+          Accept Match
+        </button>
+        <button className="decline-btn" onClick={() => onDecline(match.match_id)} disabled={isExpired}>
+          Decline
+        </button>
       </div>
     </div>
   );
@@ -84,28 +100,49 @@ export default function NGODashboard() {
 
   useWebSocket('MATCH_OFFER', handleNewMatch);
 
-  if (loading) return <div className="loading">Loading NGO dashboard...</div>;
+  if (loading) return <div className="loading">Loading dashboard...</div>;
 
   return (
     <div className="ngo-dashboard">
       <div className="ngo-header">
-        <h1>NGO Dashboard</h1>
+        <div>
+          <h1>NGO Portal</h1>
+          <p className="subtitle">Manage incoming automated food matches and capacity</p>
+        </div>
+
         <div className="auto-match-toggle">
           <label className="toggle-label">
-            <span>Auto-Match</span>
+            <span>Auto-Match Status</span>
             <div className={`toggle ${autoMatch ? 'on' : ''}`} onClick={handleToggleAutoMatch}>
               <div className="toggle-thumb" />
             </div>
+            <span className="toggle-state">{autoMatch ? 'ACTIVE' : 'PAUSED'}</span>
           </label>
         </div>
       </div>
+
       <div className="stats-grid">
-        <div className="stat-card green"><span className="stat-value">{stats?.meals_rescued ?? '—'}</span><span className="stat-label">Meals Received</span></div>
-        <div className="stat-card blue"><span className="stat-value">{matches.filter(m => m.status === 'PENDING').length}</span><span className="stat-label">Pending Offers</span></div>
+        <div className="stat-card">
+          <span className="stat-label">Meals Received</span>
+          <span className="stat-value">{stats?.meals_rescued ?? '0'}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Pending Match Offers</span>
+          <span className="stat-value">{matches.filter(m => m.status === 'PENDING').length}</span>
+        </div>
       </div>
-      <h2>Match Inbox</h2>
+
+      <div className="section-header">
+        <h2>Incoming Match Offers</h2>
+      </div>
+
       {matches.length === 0 ? (
-        <p className="empty-state">No pending match offers. {autoMatch ? 'New matches will appear here automatically.' : 'Enable auto-match to receive offers.'}</p>
+        <div className="empty-state">
+          <p>No active match offers in your inbox.</p>
+          <span className="empty-hint">
+            {autoMatch ? 'Eligible listings within your declared radius will appear here automatically.' : 'Enable Auto-Match above to start receiving offers.'}
+          </span>
+        </div>
       ) : (
         <div className="matches-list">
           {matches.map((m) => (

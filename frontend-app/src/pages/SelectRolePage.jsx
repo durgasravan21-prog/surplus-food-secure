@@ -5,10 +5,10 @@ import { ROLES } from '../config/constants';
 import './SelectRolePage.css';
 
 const roleOptions = [
-  { value: ROLES.RESTAURANT, icon: '🏪', title: 'Restaurant', desc: 'List surplus food from your kitchen for nearby NGOs' },
-  { value: ROLES.INDIVIDUAL_DONOR, icon: '🏠', title: 'Individual Donor', desc: 'Donate home-cooked surplus food safely' },
-  { value: ROLES.NGO, icon: '🏛️', title: 'NGO / Shelter', desc: 'Receive matched food donations automatically' },
-  { value: ROLES.DELIVERY_PARTNER, icon: '🚲', title: 'Delivery Partner', desc: 'Volunteer to pick up and deliver food' },
+  { value: ROLES.RESTAURANT, code: 'REST', title: 'Restaurant / Commercial Kitchen', desc: 'List surplus meals from your licensed kitchen for nearby NGOs.' },
+  { value: ROLES.INDIVIDUAL_DONOR, code: 'DONOR', title: 'Individual Donor', desc: 'Donate home-cooked surplus food with food-safety acknowledgement.' },
+  { value: ROLES.NGO, code: 'NGO', title: 'NGO / Shelter / Community Kitchen', desc: 'Receive matched surplus food donations automatically within your radius.' },
+  { value: ROLES.DELIVERY_PARTNER, code: 'VOLUNTEER', title: 'Delivery Partner', desc: 'Volunteer to safely transport food from donor kitchens to NGO dropoffs.' },
 ];
 
 export default function SelectRolePage() {
@@ -35,9 +35,10 @@ export default function SelectRolePage() {
   return (
     <div className="select-role-page">
       <div className="role-card">
-        <h1>Choose Your Role</h1>
-        <p className="role-subtitle">This is a one-time selection and cannot be changed later.</p>
+        <h1>Select Account Role</h1>
+        <p className="role-subtitle">This selection is permanent and tied to your identity. Admin review required to modify.</p>
         {error && <p className="role-error">{error}</p>}
+        
         <div className="role-options">
           {roleOptions.map((opt) => (
             <button
@@ -45,16 +46,17 @@ export default function SelectRolePage() {
               className={`role-option ${selected === opt.value ? 'selected' : ''}`}
               onClick={() => setSelected(opt.value)}
             >
-              <span className="role-icon">{opt.icon}</span>
-              <div>
+              <div className="role-tag">{opt.code}</div>
+              <div className="role-info">
                 <strong>{opt.title}</strong>
                 <p>{opt.desc}</p>
               </div>
             </button>
           ))}
         </div>
+
         <button className="role-submit" onClick={handleSubmit} disabled={!selected || loading}>
-          {loading ? 'Setting role...' : 'Continue'}
+          {loading ? 'Confirming selection...' : 'Continue to Verification'}
         </button>
       </div>
     </div>
