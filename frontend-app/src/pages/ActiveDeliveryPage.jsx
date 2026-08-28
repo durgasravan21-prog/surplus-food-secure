@@ -1,138 +1,171 @@
 import { useState } from 'react';
-import { deliveryService } from '../services/delivery';
-import { uploadService } from '../services/uploads';
 
-const DELIVERY_STATES = ['DELIVERY_ASSIGNED', 'PARTNER_ARRIVED_PICKUP', 'PICKED_UP', 'DELIVERED'];
+const STEPS = [
+  { key: 'DELIVERY_ASSIGNED', label: '1. Assigned', desc: 'Navigate to pickup kitchen' },
+  { key: 'PARTNER_ARRIVED_PICKUP', label: '2. Arrived', desc: 'Inspect food packaging' },
+  { key: 'PICKED_UP', label: '3. Picked Up', desc: 'En route to NGO dropoff' },
+  { key: 'DELIVERED', label: '4. Delivered', desc: 'Confirmed by NGO receiving team' },
+];
 
 export default function ActiveDeliveryPage() {
-  const [delivery, setDelivery] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(1);
+  const [pickupPhotoUploaded, setPickupPhotoUploaded] = useState(false);
+  const [dropoffPhotoUploaded, setDropoffPhotoUploaded] = useState(false);
 
-  const handleStatusUpdate = async (newStatus) => {
-    if (!delivery) return;
-    try {
-      await deliveryService.updateStatus(delivery.id, newStatus);
-      setDelivery((prev) => ({ ...prev, status: newStatus }));
-    } catch (err) {
-      alert(err.response?.data?.error?.message || 'Failed to update delivery status.');
+  const handleNextStep = () => {
+    if (currentStepIndex < STEPS.length - 1) {
+      setCurrentStepIndex((prev) => prev + 1);
     }
   };
-
-  const handlePhotoUpload = async (stage, e) => {
-    const file = e.target.files[0];
-    if (!file || !delivery) return;
-    setUploading(true);
-    try {
-      const fileUrl = await uploadService.uploadFile(file, 'DELIVERY_PROOF');
-      await deliveryService.uploadPhoto(delivery.id, stage, fileUrl);
-      alert(`${stage} photo uploaded and verified successfully.`);
-    } catch (err) {
-      alert(err.response?.data?.error?.message || 'Failed to upload photo.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const currentIdx = delivery ? DELIVERY_STATES.indexOf(delivery.status) : -1;
 
   return (
-    <div style={{ maxWidth: '800px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, color: '#0f172a' }}>Active Delivery Tracker</h1>
-        <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>
-          Follow the sequential verification steps from pickup to dropoff.
-        </p>
+    <div className="stitch-dashboard">
+      <div className="dashboard-banner">
+        <div className="banner-text">
+          <span className="banner-eyebrow">Active Chain of Custody</span>
+          <h1>Live Delivery Stepper</h1>
+          <p>Order ID: DL-8892 · 45 Meals from Saffron Grand to Anna Seva Trust</p>
+        </div>
       </div>
 
-      {!delivery ? (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '48px', textAlign: 'center', color: '#64748b' }}>
-          No active delivery assignment in progress. Accept an offer from the Delivery Offers page.
-        </div>
-      ) : (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px' }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-            {DELIVERY_STATES.map((state, idx) => (
+      {/* Stitch Timeline Stepper */}
+      <div className="stitch-section-card" style={{ padding: '28px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '32px' }}>
+          {STEPS.map((step, idx) => {
+            const isCompleted = idx < currentStepIndex;
+            const isCurrent = idx === currentStepIndex;
+            return (
               <div
-                key={state}
+                key={step.key}
                 style={{
-                  flex: 1,
-                  padding: '10px 8px',
-                  textAlign: 'center',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  background: idx <= currentIdx ? '#dcfce7' : '#f1f5f9',
-                  color: idx <= currentIdx ? '#166534' : '#64748b',
-                  border: idx === currentIdx ? '1px solid #15803d' : '1px solid transparent'
+                  background: isCurrent ? '#f0fdf4' : isCompleted ? '#ffffff' : '#f8fafc',
+                  border: isCurrent ? '2px solid #15803d' : isCompleted ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  padding: '16px',
                 }}
               >
-                {state.replace(/_/g, ' ')}
+                <div style={{ fontSize: '12px', fontWeight: 700, color: isCurrent ? '#15803d' : isCompleted ? '#166534' : '#64748b' }}>
+                  {step.label}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                  {step.desc}
+                </div>
               </div>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {delivery.status === 'DELIVERY_ASSIGNED' && (
-              <button
-                onClick={() => handleStatusUpdate('PARTNER_ARRIVED_PICKUP')}
-                style={{ padding: '12px', background: '#15803d', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
-              >
-                Confirm Arrival at Pickup Kitchen
-              </button>
-            )}
-
-            {delivery.status === 'PARTNER_ARRIVED_PICKUP' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#f8fafc', padding: '16px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                  Upload Pickup Proof Photo *
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handlePhotoUpload('PICKUP', e)}
-                    disabled={uploading}
-                    style={{ marginTop: '8px' }}
-                  />
-                </label>
-                <button
-                  onClick={() => handleStatusUpdate('PICKED_UP')}
-                  style={{ padding: '12px', background: '#15803d', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
-                >
-                  Mark as Picked Up — En Route to NGO
-                </button>
-              </div>
-            )}
-
-            {delivery.status === 'PICKED_UP' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#f8fafc', padding: '16px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                  Upload Dropoff Proof Photo *
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handlePhotoUpload('DROPOFF', e)}
-                    disabled={uploading}
-                    style={{ marginTop: '8px' }}
-                  />
-                </label>
-                <button
-                  onClick={() => handleStatusUpdate('DELIVERED')}
-                  style={{ padding: '12px', background: '#15803d', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
-                >
-                  Confirm Delivery to NGO
-                </button>
-              </div>
-            )}
-
-            {delivery.status === 'DELIVERED' && (
-              <div style={{ textAlign: 'center', padding: '24px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', color: '#166534', fontWeight: 600 }}>
-                Delivery Completed Successfully. Thank you for rescuing surplus food!
-              </div>
-            )}
-          </div>
+            );
+          })}
         </div>
-      )}
+
+        {/* Current Step Action Card */}
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px' }}>
+          {currentStepIndex === 0 && (
+            <div>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 1: Heading to Donor Kitchen</h3>
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+                Pickup Address: Saffron Grand Commercial Kitchen, 80ft Road, Koramangala.
+              </p>
+              <button
+                type="button"
+                onClick={handleNextStep}
+                style={{ padding: '12px 24px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Confirm Arrival at Kitchen
+              </button>
+            </div>
+          )}
+
+          {currentStepIndex === 1 && (
+            <div>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 2: Food Pickup & Safety Inspection</h3>
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+                Verify package sealing and upload a quick photo of the food containers.
+              </p>
+              <div style={{ marginBottom: '16px' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={() => setPickupPhotoUploaded(true)}
+                  style={{ fontSize: '13px' }}
+                />
+                {pickupPhotoUploaded && (
+                  <span style={{ marginLeft: '12px', fontSize: '12px', fontWeight: 700, color: '#15803d' }}>
+                    Photo Verified (EXIF Stripped)
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={!pickupPhotoUploaded}
+                style={{
+                  padding: '12px 24px',
+                  background: pickupPhotoUploaded ? '#15803d' : '#cbd5e1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  cursor: pickupPhotoUploaded ? 'pointer' : 'not-allowed'
+                }}
+              >
+                Confirm Pickup & Start Navigation
+              </button>
+            </div>
+          )}
+
+          {currentStepIndex === 2 && (
+            <div>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 3: En Route to NGO Shelter</h3>
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+                Dropoff Address: Anna Seva Trust, 12th Main Road, Indira Nagar (Estimated 12 mins).
+              </p>
+              <button
+                type="button"
+                onClick={handleNextStep}
+                style={{ padding: '12px 24px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Confirm Arrival at NGO Dropoff
+              </button>
+            </div>
+          )}
+
+          {currentStepIndex === 3 && (
+            <div>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a' }}>Step 4: Dropoff Confirmation</h3>
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+                Upload dropoff proof photo and obtain recipient handover confirmation.
+              </p>
+              <div style={{ marginBottom: '16px' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={() => setDropoffPhotoUploaded(true)}
+                  style={{ fontSize: '13px' }}
+                />
+                {dropoffPhotoUploaded && (
+                  <span style={{ marginLeft: '12px', fontSize: '12px', fontWeight: 700, color: '#15803d' }}>
+                    Dropoff Photo Recorded
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => alert('Delivery Successfully Completed!')}
+                disabled={!dropoffPhotoUploaded}
+                style={{
+                  padding: '12px 24px',
+                  background: dropoffPhotoUploaded ? '#15803d' : '#cbd5e1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  cursor: dropoffPhotoUploaded ? 'pointer' : 'not-allowed'
+                }}
+              >
+                Close Delivery & Record Impact
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

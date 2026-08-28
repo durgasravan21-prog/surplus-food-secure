@@ -19,7 +19,7 @@ const navItems = {
   ],
   [ROLES.NGO]: [
     { to: '/dashboard', label: 'Overview', end: true },
-    { to: '/dashboard/matched', label: 'Incoming Matches' },
+    { to: '/dashboard/matched', label: 'Match Inbox' },
     { to: '/dashboard/board', label: 'Browse Board' },
     { to: '/dashboard/stats', label: 'Impact Metrics' },
   ],
@@ -31,12 +31,19 @@ const navItems = {
   [ROLES.ADMIN]: [
     { to: '/dashboard', label: 'Platform Stats', end: true },
     { to: '/dashboard/verification-queue', label: 'Verification Queue' },
-    { to: '/dashboard/disputes', label: 'Disputes' },
   ],
 };
 
+const ALL_ROLES = [
+  { key: ROLES.RESTAURANT, label: 'Restaurant' },
+  { key: ROLES.INDIVIDUAL_DONOR, label: 'Donor' },
+  { key: ROLES.NGO, label: 'NGO / Shelter' },
+  { key: ROLES.DELIVERY_PARTNER, label: 'Delivery Partner' },
+  { key: ROLES.ADMIN, label: 'Admin' },
+];
+
 export default function DashboardLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, switchDemoRole } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -44,39 +51,88 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
+  const handleRoleChange = (roleKey) => {
+    switchDemoRole(roleKey);
+    navigate('/dashboard');
+  };
+
   const items = navItems[user?.role] || [];
 
   return (
-    <div className="dashboard-layout">
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-brand">Annayog</div>
-          <span className="role-badge">{user?.role?.replace(/_/g, ' ')}</span>
+    <div className="stitch-app">
+      {/* Stitch Top Header */}
+      <header className="stitch-topbar">
+        <div className="topbar-left">
+          <div className="stitch-brand">
+            <span className="brand-dot"></span>
+            <span className="brand-name">Annayog</span>
+            <span className="brand-subtitle">Surplus Food Network</span>
+          </div>
         </div>
 
-        <nav className="sidebar-nav">
-          {items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="user-email">{user?.email}</div>
-          <button className="logout-btn" onClick={handleLogout}>Sign out</button>
+        {/* Interactive Demo Role Switcher */}
+        <div className="demo-role-switcher">
+          <span className="demo-label">Demo Persona:</span>
+          <div className="role-pills">
+            {ALL_ROLES.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                className={`role-pill ${user?.role === r.key ? 'active' : ''}`}
+                onClick={() => handleRoleChange(r.key)}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </aside>
 
-      <main className="main-content">
-        <VerificationBanner />
-        <Outlet />
-      </main>
+        <div className="topbar-right">
+          <span className="status-chip verified">
+            <span className="chip-dot"></span>
+            {user?.verification_status === 'APPROVED' ? 'Verified Account' : 'Verification Required'}
+          </span>
+          <div className="user-profile">
+            <span className="profile-name">{user?.email?.split('@')[0]}</span>
+            <button className="topbar-logout" onClick={handleLogout} title="Sign Out">
+              Sign out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Layout Body */}
+      <div className="stitch-body">
+        {/* Stitch Clean Sidebar */}
+        <aside className="stitch-sidebar">
+          <div className="sidebar-section-label">Navigation</div>
+          <nav className="stitch-nav">
+            {items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `stitch-nav-item ${isActive ? 'active' : ''}`}
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="sidebar-bottom-info">
+            <div className="sidebar-info-card">
+              <div className="info-title">AI Matching Engine</div>
+              <div className="info-desc">Distance & Perishability scoring active in 10km radius</div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Content Area */}
+        <main className="stitch-main">
+          <VerificationBanner />
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
