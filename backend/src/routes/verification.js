@@ -187,6 +187,7 @@ router.get('/admin/verification/queue', authenticate, authorize('ADMIN'), async 
       const id = d.license_no || d.reg_no;
       return {
         ...d,
+        verification_id: d.id,
         email: u ? u.email : null,
         role: u ? u.role : null,
         flagged_duplicate: id ? identifierCounts[id] > 1 : false
