@@ -1,56 +1,97 @@
-import { useState, useEffect } from 'react';
-import { statsService } from '../services/stats';
+import { Link } from 'react-router-dom';
+import { useDemoData } from '../context/DemoDataContext';
+import { LISTING_STATUS } from '../config/constants';
 
 export default function AdminDashboardPage() {
-  const [dashboard, setDashboard] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { listings, verifications } = useDemoData();
 
-  useEffect(() => {
-    statsService.getAdminDashboard()
-      .then((res) => setDashboard(res.data))
-      .catch(() => setDashboard(null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="loading">Loading admin dashboard...</div>;
+  const pendingVerifications = verifications.filter((v) => v.status === 'PENDING').length;
+  const activeDispatches = listings.filter((l) => l.status === LISTING_STATUS.DELIVERY_ASSIGNED || l.status === LISTING_STATUS.MATCHED_PENDING_NGO_ACCEPT).length;
+  const totalDelivered = listings.filter((l) => l.status === LISTING_STATUS.DELIVERED).length;
 
   return (
-    <div style={{ maxWidth: '1000px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, color: '#0f172a' }}>Platform Administration</h1>
-        <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>
-          Real-time network operational metrics, match efficiency, and dispatch performance.
-        </p>
+    <div className="stitch-dashboard">
+      <div className="dashboard-banner">
+        <div className="banner-text">
+          <span className="banner-eyebrow">Platform Governance</span>
+          <h1>System Command Center</h1>
+          <p>Real-time network operational metrics, AI match efficiency, dispatch monitoring, and KYC approvals.</p>
+        </div>
+        <div className="banner-actions">
+          <Link to="/dashboard/verification-queue" className="stitch-btn-primary">
+            Review Queue ({pendingVerifications})
+          </Link>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-        {[
-          { value: dashboard?.listings_today ?? '0', label: 'Listings Today' },
-          { value: dashboard?.matched_pct ? `${dashboard.matched_pct}%` : '0%', label: 'Match Rate' },
-          { value: dashboard?.delivered_pct ? `${dashboard.delivered_pct}%` : '0%', label: 'Delivery Rate' },
-          { value: dashboard?.expired_pct ? `${dashboard.expired_pct}%` : '0%', label: 'Expiry Rate' },
-          { value: dashboard?.avg_time_to_match_seconds ? `${dashboard.avg_time_to_match_seconds}s` : '0s', label: 'Avg Match Time' },
-        ].map((s) => (
-          <div
-            key={s.label}
-            style={{
-              background: '#ffffff',
-              borderRadius: '8px',
-              padding: '24px',
-              border: '1px solid #e2e8f0',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }}
-          >
-            <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b' }}>
-              {s.label}
-            </div>
-            <div style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>
-              {s.value}
-            </div>
+      <div className="stitch-metrics-grid">
+        <div className="stitch-metric-card">
+          <span className="metric-label">Network Match Rate</span>
+          <div className="metric-number">94.2%</div>
+          <span className="metric-footnote">AI distance & perishability algorithm</span>
+        </div>
+
+        <div className="stitch-metric-card">
+          <span className="metric-label">Avg. Time to Match</span>
+          <div className="metric-number">84 <span className="unit">seconds</span></div>
+          <span className="metric-footnote">From publish to NGO reservation</span>
+        </div>
+
+        <div className="stitch-metric-card">
+          <span className="metric-label">Active Dispatches</span>
+          <div className="metric-number">{activeDispatches}</div>
+          <span className="metric-footnote">Live pickups & deliveries in transit</span>
+        </div>
+
+        <div className="stitch-metric-card">
+          <span className="metric-label">Pending Verifications</span>
+          <div className="metric-number">{pendingVerifications}</div>
+          <span className="metric-footnote">Awaiting FSSAI / 80G review</span>
+        </div>
+      </div>
+
+      {/* Network Overview Table */}
+      <div className="stitch-section-card">
+        <div className="section-card-header">
+          <div>
+            <h2>Active Network Dispatches & Listings</h2>
+            <p>Full audit trail of all listings across the platform</p>
           </div>
-        ))}
+          <Link to="/dashboard/board" className="stitch-btn-ghost">
+            View Public Board
+          </Link>
+        </div>
+
+        <div className="stitch-table-wrapper">
+          <table className="stitch-table">
+            <thead>
+              <tr>
+                <th>Listing ID</th>
+                <th>Donor Entity</th>
+                <th>Food Item</th>
+                <th>Portions</th>
+                <th>Assigned Destination</th>
+                <th>Current Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {listings.map((l) => (
+                <tr key={l.id}>
+                  <td><span style={{ fontWeight: 700, color: '#0f172a' }}>{l.id}</span></td>
+                  <td>{l.donor_name}</td>
+                  <td><strong>{l.food_type}</strong></td>
+                  <td>{l.quantity_meals} meals</td>
+                  <td>{l.matched_ngo_name || 'Enqueued in AI pool'}</td>
+                  <td>
+                    <span className="status-pill chip-green">
+                      {l.status.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
