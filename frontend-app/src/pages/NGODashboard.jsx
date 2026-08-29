@@ -148,12 +148,14 @@ export default function NGODashboard() {
   };
 
   const handleToggleAutoMatch = async () => {
+    const previousVal = autoMatchEnabled;
+    const newVal = !autoMatchEnabled;
+    setAutoMatchEnabled(newVal);
     try {
-      const newVal = !autoMatchEnabled;
       await matchingService.toggleAutoMatch(newVal);
-      setAutoMatchEnabled(newVal);
     } catch (err) {
       console.error('Error toggling auto match:', err);
+      setAutoMatchEnabled(previousVal);
     }
   };
 

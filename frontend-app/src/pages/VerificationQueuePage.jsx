@@ -132,16 +132,43 @@ export default function VerificationQueuePage() {
                   </p>
                   
                   {v.file_url && (
-                    v.file_url.toLowerCase().endsWith('.pdf') ? (
+                    (v.file_url.toLowerCase().includes('.pdf') || v.doc_type === 'FSSAI_LICENSE') ? (
                       <div style={{ marginTop: '10px' }}>
-                        <a href={v.file_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#2563eb', fontWeight: 600, fontSize: '12px', textDecoration: 'underline' }}>
-                          📄 View Document (PDF)
-                        </a>
+                        <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '6px' }}>📄 PDF Document Preview:</span>
+                        <iframe
+                          src={v.file_url}
+                          title={`PDF-${v.id}`}
+                          style={{
+                            width: '100%',
+                            height: '220px',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            background: '#f8fafc'
+                          }}
+                        />
+                        <div style={{ marginTop: '6px' }}>
+                          <a
+                            href={v.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              color: '#2563eb',
+                              fontWeight: 600,
+                              fontSize: '12px',
+                              textDecoration: 'underline'
+                            }}
+                          >
+                            ↗️ Open / Download PDF in New Tab
+                          </a>
+                        </div>
                       </div>
                     ) : (
                       <div style={{ marginTop: '10px' }}>
-                        <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Document Preview:</span>
-                        <img src={v.file_url} alt="Verification Doc" style={{ maxWidth: '180px', maxHeight: '120px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(v.file_url, '_blank')} />
+                        <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Document Image Preview:</span>
+                        <img src={v.file_url} alt="Verification Doc" style={{ maxWidth: '240px', maxHeight: '160px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(v.file_url, '_blank')} />
                       </div>
                     )
                   )}

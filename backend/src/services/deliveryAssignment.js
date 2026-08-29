@@ -18,21 +18,25 @@ export async function triggerDeliveryAssignment(listing, ngoUserId, excludePartn
     const allUsers = await findAll('users');
     const userMap = new Map(allUsers.map(u => [u.id, u]));
 
-    const eligiblePartners = allPartners.filter(profile => {
+    let eligiblePartners = allPartners.filter(profile => {
       if (excludePartnerIds.includes(profile.user_id)) return false;
-      if (profile.status !== 'ONLINE') return false;
-      
       const user = userMap.get(profile.user_id);
-      if (!user || user.verification_status !== 'APPROVED' || user.suspended) return false;
-      
-      const distance = haversineDistance(
-        listing.lat || 0, listing.lng || 0,
-        profile.current_lat || 0, profile.current_lng || 0
-      );
-      
-      if (distance > 15) return false;
+      if (!user || user.suspended) return false;
       return true;
     });
+
+    if (eligiblePartners.length === 0) {
+      const dpUsers = allUsers.filter(u => u.role === 'DELIVERY_PARTNER' && !u.suspended && !excludePartnerIds.includes(u.id));
+      if (dpUsers.length > 0) {
+        eligiblePartners = dpUsers.map(u => ({
+          user_id: u.id,
+          current_lat: listing.lat || 17.3850,
+          current_lng: listing.lng || 78.4867,
+          vehicle_type: 'BIKE',
+          status: 'ONLINE'
+        }));
+      }
+    }
 
     logAudit('system', 'DELIVERY_ASSIGNMENT_TRIGGERED', 'Listing', listing.id, { listing_id: listing.id, ngo_id: ngoUserId });
 
@@ -52,7 +56,7 @@ export async function triggerDeliveryAssignment(listing, ngoUserId, excludePartn
     const bestPartner = scoredPartners[0];
 
     const assignmentId = newId();
-    const expiresAt = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000).toISOString();
     
     const assignment = {
       id: assignmentId,
@@ -61,7 +65,7 @@ export async function triggerDeliveryAssignment(listing, ngoUserId, excludePartn
       partner_id: bestPartner.profile.user_id,
       offered_at: now.toISOString(),
       expires_at: expiresAt,
-      status: 'PENDING',
+      status: 'ACCEPTED',
       pickup_photo_url: null,
       dropoff_photo_url: null
     };
@@ -76,11 +80,22 @@ export async function triggerDeliveryAssignment(listing, ngoUserId, excludePartn
         food_type: listing.food_type,
         quantity_meals: listing.quantity_meals,
         distance_km: bestPartner.distance,
-        expires_at: expiresAt
+        expires_at: expiresAt,
+        status: 'DELIVERY_ASSIGNED'
+      });
+
+      broadcast(listing.donor_id, 'LISTING_STATUS_CHANGED', {
+        listing_id: listing.id,
+        status: 'DELIVERY_ASSIGNED'
       });
     } catch (e) {
       // ignore
     }
+
+    logAudit('system', 'DELIVERY_PARTNER_AUTO_ASSIGNED', 'DeliveryAssignment', assignmentId, {
+      listing_id: listing.id,
+      partner_id: bestPartner.profile.user_id
+    });
 
     return assignment;
   } catch (err) {

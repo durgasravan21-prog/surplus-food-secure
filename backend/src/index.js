@@ -67,7 +67,14 @@ app.use(express.json({ limit: '10mb' }));
 app.use(generalLimiter);
 
 // Serve uploaded files statically (local storage mode)
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.toLowerCase().endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline');
+    }
+  }
+}));
 
 // Handle direct file uploads (for local storage mode)
 app.put('/uploads/:filename', (req, res) => {
