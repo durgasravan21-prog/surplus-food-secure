@@ -14,6 +14,7 @@ import DonorDashboard from './pages/DonorDashboard';
 import NGODashboard from './pages/NGODashboard';
 import CreateListingPage from './pages/CreateListingPage';
 import MyListingsPage from './pages/MyListingsPage';
+import MatchInboxPage from './pages/MatchInboxPage';
 import BrowseBoardPage from './pages/BrowseBoardPage';
 import DeliveryOffersPage from './pages/DeliveryOffersPage';
 import ActiveDeliveryPage from './pages/ActiveDeliveryPage';
