@@ -1,50 +1,56 @@
-import { useState, useEffect, useCallback } from 'react';
-import { deliveryService } from '../services/delivery';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { useNavigate } from 'react-router-dom';
+import { useDemoData } from '../context/DemoDataContext';
+import { LISTING_STATUS } from '../config/constants';
 import { useCountdown } from '../hooks/useCountdown';
 
-function OfferCard({ offer, onAccept, onDecline }) {
-  const timeLeft = useCountdown(offer.expires_at);
-  const isExpired = timeLeft.total <= 0;
+function DeliveryOfferCard({ listing, onAccept }) {
+  const timeLeft = useCountdown(new Date(Date.now() + 5 * 60 * 1000));
 
   return (
-    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px', opacity: isExpired ? 0.6 : 1 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '4px' }}>
-          Delivery Assignment Offer
-        </span>
-        {offer.distance_km && (
-          <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
-            {offer.distance_km} km to pickup
-          </span>
-        )}
+    <div className="stitch-match-card">
+      <div className="match-card-header">
+        <div>
+          <span className="match-donor">Direct Pickup Assignment</span>
+          <h3 className="match-food">{listing.food_type}</h3>
+        </div>
+        <span className="distance-badge">{listing.distance_km || 2.1} km to pickup</span>
       </div>
 
-      <h3 style={{ margin: '8px 0', fontSize: '16px', color: '#0f172a' }}>{offer.food_type || 'Surplus Food Pickup'}</h3>
-      <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>
-        Exact address and route will be disclosed upon acceptance.
-      </p>
-
-      {!isExpired && (
-        <div style={{ fontSize: '12px', color: '#b45309', background: '#fef3c7', padding: '6px 10px', borderRadius: '4px', marginBottom: '14px', display: 'inline-block' }}>
-          Accept window expires in: <strong>{timeLeft.minutes}m {timeLeft.seconds}s</strong>
+      <div className="match-specs">
+        <div className="spec-box">
+          <span className="spec-label">Pickup Kitchen</span>
+          <span className="spec-value">{listing.donor_name}</span>
         </div>
-      )}
+        <div className="spec-box">
+          <span className="spec-label">Quantity</span>
+          <span className="spec-value">{listing.quantity_meals} meals</span>
+        </div>
+        <div className="spec-box">
+          <span className="spec-label">Dropoff Destination</span>
+          <span className="spec-value">{listing.matched_ngo_name || 'Anna Seva Trust Food Bank'}</span>
+        </div>
+      </div>
 
-      <div style={{ display: 'flex', gap: '10px' }}>
+      <div className="match-countdown-bar">
+        <div className="countdown-info">
+          <span>Accept Assignment Window</span>
+          <strong>{timeLeft.minutes}m {timeLeft.seconds}s remaining</strong>
+        </div>
+        <div className="countdown-progress">
+          <div
+            className="progress-fill"
+            style={{ width: `${Math.min(100, (timeLeft.total / (5 * 60 * 1000)) * 100)}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="match-actions">
         <button
-          onClick={() => onAccept(offer.id)}
-          disabled={isExpired}
-          style={{ flex: 1, padding: '10px', background: '#15803d', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: isExpired ? 'not-allowed' : 'pointer' }}
+          type="button"
+          className="btn-accept"
+          onClick={() => onAccept(listing.id)}
         >
-          Accept Assignment
-        </button>
-        <button
-          onClick={() => onDecline(offer.id)}
-          disabled={isExpired}
-          style={{ flex: 1, padding: '10px', background: '#ffffff', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: isExpired ? 'not-allowed' : 'pointer' }}
-        >
-          Decline
+          Accept Pickup & Open Route Stepper
         </button>
       </div>
     </div>
@@ -52,60 +58,49 @@ function OfferCard({ offer, onAccept, onDecline }) {
 }
 
 export default function DeliveryOffersPage() {
-  const [offers, setOffers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { listings } = useDemoData();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    deliveryService.getPendingOffers()
-      .then((res) => setOffers(res.data || []))
-      .catch(() => setOffers([]))
-      .finally(() => setLoading(false));
-  }, []);
+  // Find listings ready for delivery assignment
+  const deliveryOffers = listings.filter(
+    (l) => l.status === LISTING_STATUS.DELIVERY_ASSIGNED || l.status === LISTING_STATUS.NGO_ACCEPTED
+  );
 
-  const handleAccept = async (id) => {
-    try {
-      await deliveryService.acceptOffer(id);
-      setOffers((prev) => prev.filter((o) => o.id !== id));
-      window.location.href = '/dashboard/active';
-    } catch (err) {
-      alert(err.response?.data?.error?.message || 'Failed to accept offer.');
-    }
+  const handleAccept = () => {
+    navigate('/dashboard/active');
   };
-
-  const handleDecline = async (id) => {
-    try {
-      await deliveryService.declineOffer(id);
-      setOffers((prev) => prev.filter((o) => o.id !== id));
-    } catch (err) {
-      alert(err.response?.data?.error?.message || 'Failed to decline offer.');
-    }
-  };
-
-  const handleNewOffer = useCallback((data) => setOffers((prev) => [data, ...prev]), []);
-  useWebSocket('DELIVERY_OFFER', handleNewOffer);
-
-  if (loading) return <div className="loading">Loading delivery offers...</div>;
 
   return (
-    <div style={{ maxWidth: '900px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, color: '#0f172a' }}>Delivery Offers</h1>
-        <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>
-          Auto-assigned pickup opportunities within your vehicle operating radius.
-        </p>
+    <div className="stitch-dashboard">
+      <div className="dashboard-banner">
+        <div className="banner-text">
+          <span className="banner-eyebrow">Volunteer Rider Command</span>
+          <h1>Available Pickup Offers</h1>
+          <p>Real-time delivery assignments sorted nearest-first within your active vehicle operating radius.</p>
+        </div>
       </div>
 
-      {offers.length === 0 ? (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '48px', textAlign: 'center', color: '#64748b' }}>
-          No pending delivery offers at the moment. Keep your status online to receive assignments.
+      <div className="stitch-section-card">
+        <div className="section-card-header">
+          <div>
+            <h2>Pending Dispatch Assignments</h2>
+            <p>Assigned pickups matching your vehicle mode and current location</p>
+          </div>
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {offers.map((o) => (
-            <OfferCard key={o.id} offer={o} onAccept={handleAccept} onDecline={handleDecline} />
-          ))}
+
+        <div className="match-cards-container">
+          {deliveryOffers.length === 0 ? (
+            <div className="empty-inbox">
+              <div className="empty-title">No pending pickup assignments</div>
+              <p>Keep your status set to Online to receive real-time notifications when NGOs accept match offers.</p>
+            </div>
+          ) : (
+            deliveryOffers.map((item) => (
+              <DeliveryOfferCard key={item.id} listing={item} onAccept={handleAccept} />
+            ))
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

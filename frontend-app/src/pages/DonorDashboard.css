@@ -1,136 +1,233 @@
-.donor-dashboard {
-  max-width: 1100px;
+.stitch-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.dashboard-header {
+/* Banner */
+.dashboard-banner {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
-.dashboard-header h1 {
+.banner-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #15803d;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.banner-text h1 {
   margin: 0;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   color: #0f172a;
 }
 
-.user-indicator {
+.banner-text p {
+  margin: 4px 0 0;
   font-size: 13px;
   color: #64748b;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.stat-card {
-  background: #ffffff;
+.stitch-btn-primary {
+  display: inline-block;
+  padding: 10px 18px;
+  background: #0f172a;
+  color: #ffffff;
   border-radius: 8px;
-  padding: 20px;
-  border: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #64748b;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+  white-space: nowrap;
 }
 
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
+.stitch-btn-primary:hover {
+  background: #1e293b;
+}
+
+.stitch-btn-ghost {
+  display: inline-block;
+  padding: 8px 14px;
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.stitch-btn-ghost:hover {
+  background: #f8fafc;
   color: #0f172a;
 }
 
-.section-header {
-  margin-bottom: 16px;
+/* Metrics Grid */
+.stitch-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
 }
 
-.section-header h2 {
+.stitch-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.metric-number {
+  font-size: 30px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.metric-number .unit {
+  font-size: 16px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.metric-footnote {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Section Card */
+.stitch-section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.section-card-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-card-header h2 {
+  margin: 0;
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
-  margin: 0;
 }
 
-.listings-table {
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
+.section-card-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
 }
 
-.listings-table table {
+/* Table */
+.stitch-table-wrapper {
+  overflow-x: auto;
+}
+
+.stitch-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.listings-table th,
-.listings-table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 13px;
-}
-
-.listings-table th {
+.stitch-table th {
   background: #f8fafc;
-  font-weight: 600;
-  color: #475569;
+  padding: 12px 20px;
   font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: #475569;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.status-badge {
+.stitch-table td {
+  padding: 16px 20px;
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.stitch-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.item-title {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.item-id {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.qty-highlight {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.perish-tag {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 2px 8px;
+  background: #f1f5f9;
+  color: #475569;
   border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.entity-name {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+/* Status Pills */
+.status-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 9999px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
-.badge-blue { background: #dbeafe; color: #1e40af; }
-.badge-amber { background: #fef3c7; color: #92400e; }
-.badge-green { background: #dcfce7; color: #166534; }
-.badge-purple { background: #f3e8ff; color: #6b21a8; }
-.badge-teal { background: #ccfbf1; color: #115e59; }
-.badge-green-solid { background: #15803d; color: #ffffff; }
-.badge-neutral { background: #f1f5f9; color: #475569; }
-.badge-red { background: #fee2e2; color: #991b1b; }
-
-.empty-state {
-  text-align: center;
-  padding: 48px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  color: #64748b;
-  font-size: 14px;
-}
-
-.create-link {
-  display: inline-block;
-  margin-top: 12px;
-  color: #15803d;
-  font-weight: 600;
-}
-
-.loading {
-  text-align: center;
-  padding: 60px;
-  color: #64748b;
-  font-size: 14px;
-}
+.chip-blue { background: #dbeafe; color: #1e40af; }
+.chip-amber { background: #fef3c7; color: #92400e; }
+.chip-teal { background: #ccfbf1; color: #115e59; }
+.chip-purple { background: #f3e8ff; color: #6b21a8; }
+.chip-indigo { background: #e0e7ff; color: #3730a3; }
+.chip-green { background: #dcfce7; color: #166534; }
+.chip-gray { background: #f1f5f9; color: #475569; }

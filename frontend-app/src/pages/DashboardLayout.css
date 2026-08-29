@@ -1,130 +1,315 @@
-.dashboard-layout {
-  display: flex;
-  min-height: 100vh;
-}
-
-.sidebar {
-  width: 240px;
-  background: #0f172a;
-  color: #ffffff;
+.stitch-app {
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 10;
-  border-right: 1px solid #1e293b;
+  min-height: 100vh;
+  background: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #0f172a;
 }
 
-.sidebar-header {
-  padding-bottom: 20px;
-  border-bottom: 1px solid #1e293b;
+/* Top Navigation Bar */
+.stitch-topbar {
+  height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stitch-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #15803d;
+}
+
+.brand-name {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.brand-badge-stitch {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 3px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* Persona Switcher */
+.demo-role-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 4px 6px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+}
+
+.demo-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  padding-left: 8px;
+}
+
+.role-pills {
+  display: flex;
+  gap: 3px;
+}
+
+.role-pill {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.role-pill:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.role-pill.active {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.15);
+}
+
+/* Topbar Right Profile */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.system-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #15803d;
+  background: #f0fdf4;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid #bbf7d0;
+}
+
+.indicator-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+.user-profile-widget {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.profile-role-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
+
+.topbar-signout-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.topbar-signout-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Layout Body */
+.stitch-body {
+  display: flex;
+  flex: 1;
+}
+
+/* Sidebar */
+.stitch-sidebar {
+  width: 250px;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  min-height: calc(100vh - 64px);
+}
+
+.sidebar-persona-badge {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
   margin-bottom: 20px;
 }
 
-.sidebar-brand {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: #ffffff;
-  margin-bottom: 6px;
+.persona-type {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  display: block;
 }
 
-.role-badge {
-  display: inline-block;
-  padding: 3px 8px;
-  background: #1e293b;
-  color: #94a3b8;
-  border-radius: 4px;
+.persona-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+.nav-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sidebar-section-label {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-}
-
-.sidebar-nav {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.nav-link {
-  padding: 10px 14px;
-  border-radius: 6px;
   color: #94a3b8;
-  text-decoration: none;
+  margin-bottom: 6px;
+  padding-left: 8px;
+}
+
+.stitch-nav-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #475569;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  text-decoration: none;
   transition: all 0.15s ease-in-out;
 }
 
-.nav-link:hover {
-  background: #1e293b;
-  color: #ffffff;
+.stitch-nav-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
-.nav-link.active {
-  background: #15803d;
+.stitch-nav-item.active {
+  background: #0f172a;
   color: #ffffff;
   font-weight: 600;
 }
 
-.sidebar-footer {
-  padding-top: 16px;
-  border-top: 1px solid #1e293b;
-}
-
-.user-email {
-  display: block;
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.logout-btn {
-  width: 100%;
-  padding: 8px 12px;
-  background: transparent;
-  color: #94a3b8;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.15s;
-}
-
-.logout-btn:hover {
-  background: #1e293b;
+.nav-count-badge {
+  background: #15803d;
   color: #ffffff;
-  border-color: #475569;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
 }
 
-.main-content {
-  flex: 1;
-  margin-left: 240px;
-  padding: 32px;
+.stitch-nav-item.active .nav-count-badge {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.sidebar-bottom-info {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.sidebar-info-card {
   background: #f8fafc;
-  min-height: 100vh;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
 }
 
-@media (max-width: 768px) {
-  .sidebar {
-    width: 100%;
-    position: relative;
-    padding: 16px;
-  }
-  .main-content {
-    margin-left: 0;
-    padding: 20px;
-  }
-  .dashboard-layout {
-    flex-direction: column;
-  }
+.info-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.info-stats-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.info-desc {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+/* Main Content Area */
+.stitch-main {
+  flex: 1;
+  padding: 32px;
+  max-width: 1200px;
 }

@@ -1,9 +1,10 @@
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { ROLES } from '../config/constants';
 import './LoginPage.css';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, switchDemoRole } = useAuth();
   const navigate = useNavigate();
 
   const handleGoogleLogin = () => {
@@ -14,44 +15,51 @@ export default function LoginPage() {
     window.location.href = url;
   };
 
-  return (
-    <div className="login-page">
-      <div className="login-card">
-        <div className="login-header">
-          <div className="brand-badge">Surplus Food Rescue Network</div>
-          <h1 className="login-logo">Annayog</h1>
-          <p className="login-description">
-            Connecting verified restaurants, NGOs, and delivery partners to eliminate surplus food waste through automated matching.
-          </p>
-        </div>
+  const handleQuickDemo = (roleKey) => {
+    switchDemoRole(roleKey);
+    navigate('/dashboard');
+  };
 
-        <button className="google-login-btn" onClick={handleGoogleLogin}>
-          <svg className="google-icon" viewBox="0 0 24 24" width="18" height="18">
+  return (
+    <div className="stitch-login-wrapper">
+      <div className="stitch-login-box">
+        <div className="login-badge-tag">AI-Matched Surplus Food Network</div>
+        <h1 className="login-brand-title">Annayog</h1>
+        <p className="login-brand-subtitle">
+          Verification-gated platform connecting licensed restaurants, residential donors, NGOs, and delivery partners.
+        </p>
+
+        <button type="button" className="google-auth-button" onClick={handleGoogleLogin}>
+          <svg className="g-svg" viewBox="0 0 24 24" width="18" height="18">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          Continue with Google
+          Continue with Google OAuth
         </button>
 
-        <div className="login-features">
-          <div className="feature">
-            <span className="feature-bullet"></span>
-            <span>Identity verification required for all stakeholders</span>
-          </div>
-          <div className="feature">
-            <span className="feature-bullet"></span>
-            <span>Distance-first automated matching engine</span>
-          </div>
-          <div className="feature">
-            <span className="feature-bullet"></span>
-            <span>Full pickup lifecycle with photo verification</span>
-          </div>
-          <div className="feature">
-            <span className="feature-bullet"></span>
-            <span>Strict RBAC and audit trail logging</span>
-          </div>
+        <div className="demo-access-divider">
+          <span>Or Test Drive as a Demo Persona</span>
+        </div>
+
+        <div className="quick-demo-grid">
+          <button type="button" className="demo-card-btn" onClick={() => handleQuickDemo(ROLES.RESTAURANT)}>
+            <strong>Restaurant Kitchen</strong>
+            <span>Publish surplus meals</span>
+          </button>
+          <button type="button" className="demo-card-btn" onClick={() => handleQuickDemo(ROLES.NGO)}>
+            <strong>NGO Shelter</strong>
+            <span>Auto-match inbox</span>
+          </button>
+          <button type="button" className="demo-card-btn" onClick={() => handleQuickDemo(ROLES.DELIVERY_PARTNER)}>
+            <strong>Delivery Partner</strong>
+            <span>Accept pickup offers</span>
+          </button>
+          <button type="button" className="demo-card-btn" onClick={() => handleQuickDemo(ROLES.ADMIN)}>
+            <strong>Platform Admin</strong>
+            <span>Verification queue</span>
+          </button>
         </div>
       </div>
     </div>
