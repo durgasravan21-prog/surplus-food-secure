@@ -21,7 +21,7 @@ export default function MyListingsPage() {
     if (!reason) return;
     try {
       await listingsService.cancel(id, reason);
-      setListings((prev) => prev.map((l) => l.listing_id === id ? { ...l, status: 'CANCELLED' } : l));
+      setListings((prev) => prev.map((l) => l.id === id ? { ...l, status: 'CANCELLED' } : l));
     } catch (err) {
       alert(err.response?.data?.error?.message || 'Failed to cancel listing.');
     }
@@ -98,7 +98,7 @@ export default function MyListingsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {listings.map((l) => (
-            <div key={l.listing_id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={l.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <strong style={{ fontSize: '15px', color: '#0f172a' }}>{l.food_type}</strong>
                 <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0' }}>
@@ -111,7 +111,7 @@ export default function MyListingsPage() {
                 </span>
                 {!['DELIVERED', 'EXPIRED', 'CANCELLED'].includes(l.status) && (
                   <button
-                    onClick={() => handleCancel(l.listing_id)}
+                    onClick={() => handleCancel(l.id)}
                     style={{ padding: '6px 12px', background: '#ffffff', border: '1px solid #cbd5e1', color: '#dc2626', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                   >
                     Cancel

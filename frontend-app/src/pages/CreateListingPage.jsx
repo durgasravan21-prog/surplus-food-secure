@@ -65,7 +65,14 @@ export default function CreateListingPage() {
       await listingsService.create(payload);
       navigate('/dashboard/listings');
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to publish listing.');
+      const errMsg = err.response?.data?.error?.message;
+      if (Array.isArray(errMsg)) {
+        setError(errMsg.map(e => `${e.path.join('.')}: ${e.message}`).join(', '));
+      } else if (typeof errMsg === 'object' && errMsg !== null) {
+        setError(JSON.stringify(errMsg));
+      } else {
+        setError(errMsg || 'Failed to publish listing.');
+      }
     } finally {
       setLoading(false);
     }

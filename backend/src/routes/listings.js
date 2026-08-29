@@ -25,7 +25,7 @@ const createListingSchema = z.object({
     start: z.string().datetime(),
     end: z.string().datetime(),
   }),
-  photo_url: z.string().url().optional().nullable(),
+  photo_url: z.string().url().or(z.literal('')).optional().nullable(),
   lat: z.number(),
   lng: z.number(),
   safety_ack: z.boolean().optional(),
@@ -71,7 +71,8 @@ router.post('/listings', authenticate, requireVerified, authorize('RESTAURANT', 
     return success(res, { listing_id: newListing.id, ...newListing });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return badRequest(res, err.errors);
+      const issues = err.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      return badRequest(res, `Validation failed: ${issues}`);
     }
     return serverError(res, err.message);
   }
