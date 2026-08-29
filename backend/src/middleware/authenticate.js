@@ -1,8 +1,8 @@
 import { verifyAccessToken } from '../utils/jwt.js';
-import { getById } from '../db/database.js';
+import { getById } from '../db/supabase.js';
 import { unauthorized } from '../utils/envelope.js';
 
-export function authenticate(req, res, next) {
+export async function authenticate(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -12,7 +12,7 @@ export function authenticate(req, res, next) {
 
     const decoded = verifyAccessToken(token);
 
-    const user = getById('users', decoded.user_id);
+    const user = await getById('users', decoded.user_id);
     if (!user) {
       return unauthorized(res, 'User account not found');
     }

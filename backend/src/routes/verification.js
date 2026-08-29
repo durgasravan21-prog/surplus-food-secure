@@ -27,7 +27,8 @@ router.post('/verification/submit', authenticate, async (req, res) => {
     const identifier = license_no || reg_no;
     
     if (identifier) {
-      const duplicate = getDb().prepare('SELECT id FROM verification_documents WHERE license_no = ? OR reg_no = ?').get(identifier, identifier);
+      const allDocs = await findAll('verification_documents');
+      const duplicate = allDocs.find(d => (d.license_no === identifier || d.reg_no === identifier) && d.user_id !== user.id);
       if (duplicate) {
         return conflict(res, 'Duplicate license/registration number');
       }
@@ -36,7 +37,7 @@ router.post('/verification/submit', authenticate, async (req, res) => {
     const docId = newId();
     const docUrl = file_url || id_file_url;
     
-    insert('verification_documents', {
+    await insert('verification_documents', {
       id: docId,
       user_id: user.id,
       doc_type: doc_type || null,
@@ -51,9 +52,9 @@ router.post('/verification/submit', authenticate, async (req, res) => {
     });
 
     if (user.role === 'RESTAURANT' || user.role === 'INDIVIDUAL_DONOR') {
-      const existing = getById('restaurant_profiles', user.id);
+      const existing = await getById('restaurant_profiles', user.id);
       if (!existing) {
-        insert('restaurant_profiles', {
+        await insert('restaurant_profiles', {
           user_id: user.id,
           business_name: '',
           license_no: license_no || null,
@@ -135,7 +136,7 @@ router.post('/verification/:id/review', authenticate, authorize('ADMIN'), async 
     const { id } = req.params;
     const { decision, reason } = req.body;
     
-    const doc = getById('verification_documents', id);
+    const doc = await getById('verification_documents', id);
     if (!doc) return notFound(res, 'Verification document not found');
 
     if ((decision === 'REJECTED' || decision === 'RESUBMIT_REQUIRED') && !reason) {
@@ -147,21 +148,21 @@ router.post('/verification/:id/review', authenticate, authorize('ADMIN'), async 
       return badRequest(res, 'Invalid decision');
     }
 
-    updateById('verification_documents', id, {
+    await updateById('verification_documents', id, {
       status: decision,
       reviewed_by: req.user.id,
       review_reason: reason || null,
       reviewed_at: new Date().toISOString()
     });
 
-    const user = getById('users', doc.user_id);
+    const user = await getById('users', doc.user_id);
     if (user) {
-      updateById('users', user.id, { verification_status: decision });
+      await updateById('users', user.id, { verification_status: decision });
 
       if (decision === 'APPROVED' && user.role === 'DELIVERY_PARTNER') {
-        const dpProfile = getById('delivery_partner_profiles', user.id);
+        const dpProfile = await getById('delivery_partner_profiles', user.id);
         if (dpProfile) {
-          updateById('delivery_partner_profiles', user.id, { status: 'ONLINE' });
+          await updateById('delivery_partner_profiles', user.id, { status: 'ONLINE' });
         }
       }
     }
@@ -180,21 +181,14 @@ router.post('/verification/:id/review', authenticate, authorize('ADMIN'), async 
 router.get('/admin/verification/queue', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const { status } = req.query;
-    let query = `
-      SELECT v.*, u.email, u.role
-      FROM verification_documents v
-      LEFT JOIN users u ON v.user_id = u.id
-    `;
-    const params = [];
-    if (status) {
-      query += ` WHERE v.status = ?`;
-      params.push(status);
-    }
-    
-    const docs = getDb().prepare(query).all(...params);
-    
+    const filter = status ? { status } : {};
+    const docs = await findAll('verification_documents', filter);
+    const usersList = await findAll('users');
+    const userMap = new Map(usersList.map(u => [u.id, u]));
+
+    const allDocs = await findAll('verification_documents');
     const identifierCounts = {};
-    getDb().prepare('SELECT license_no, reg_no FROM verification_documents').all().forEach(d => {
+    allDocs.forEach(d => {
       const id = d.license_no || d.reg_no;
       if (id) {
         identifierCounts[id] = (identifierCounts[id] || 0) + 1;
@@ -202,10 +196,13 @@ router.get('/admin/verification/queue', authenticate, authorize('ADMIN'), async 
     });
 
     const enrichedDocs = docs.map(d => {
+      const u = userMap.get(d.user_id);
       const id = d.license_no || d.reg_no;
       return {
         ...d,
         verification_id: d.id,
+        email: u?.email || '',
+        role: u?.role || '',
         flagged_duplicate: id ? identifierCounts[id] > 1 : false
       };
     });

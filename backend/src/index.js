@@ -86,7 +86,20 @@ app.put('/uploads/:filename', (req, res) => {
   });
 });
 
-// ── Health Check (no auth required) ─────────────────────────────────────────
+// ── Root & Health Check (no auth required) ──────────────────────────────────
+app.get(['/', '/v1'], (req, res) => {
+  res.json({
+    data: {
+      name: 'ANNAYOG API Server',
+      status: 'online',
+      database: 'Supabase Cloud Postgres',
+      version: 'v1',
+      health_check: 'http://localhost:5000/v1/health',
+      frontend_app: 'http://localhost:5173/'
+    }
+  });
+});
+
 app.get('/v1/health', (req, res) => {
   res.json({ data: { status: 'ok', timestamp: new Date().toISOString() } });
 });

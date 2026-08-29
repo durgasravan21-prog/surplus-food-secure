@@ -2,25 +2,11 @@
  * ============================================================================
  * ANNAYOG — WebSocket Server
  * ============================================================================
- * Provides real-time push notifications to connected clients.
- * Each client connects with their JWT token as a query parameter:
- *   wss://api.annayog.app/v1/ws?token=<access_token>
- *
- * Events pushed to clients:
- *   - LISTING_STATUS_CHANGED  → to donors when their listing status updates
- *   - MATCH_OFFER             → to NGOs when a new match is offered
- *   - DELIVERY_OFFER          → to delivery partners when assigned a pickup
- *
- * Architecture:
- *   - `connections` Map tracks userId → Set<WebSocket>
- *   - `broadcast(userId, event, data)` sends to all sockets for that user
- *   - `broadcastToRole(role, event, data)` sends to all users with a role
- * ============================================================================
  */
 
 import { WebSocketServer } from 'ws';
 import { verifyAccessToken } from '../utils/jwt.js';
-import { getById } from '../db/database.js';
+import { getById } from '../db/supabase.js';
 
 // userId → Set<WebSocket>
 const connections = new Map();
@@ -32,9 +18,8 @@ const connections = new Map();
 export function setupWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/v1/ws' });
 
-  wss.on('connection', (ws, req) => {
+  wss.on('connection', async (ws, req) => {
     try {
-      // Extract token from query string: ?token=xxx
       const url = new URL(req.url, 'http://localhost');
       const token = url.searchParams.get('token');
 
@@ -43,8 +28,15 @@ export function setupWebSocket(server) {
         return;
       }
 
-      const decoded = verifyAccessToken(token);
-      const user = getById('users', decoded.user_id);
+      let decoded;
+      try {
+        decoded = verifyAccessToken(token);
+      } catch (err) {
+        ws.close(4001, 'Invalid or expired token');
+        return;
+      }
+
+      const user = await getById('users', decoded.user_id);
       if (!user || user.suspended) {
         ws.close(4003, 'Unauthorized');
         return;
@@ -52,69 +44,80 @@ export function setupWebSocket(server) {
 
       const userId = decoded.user_id;
 
-      // Register connection
       if (!connections.has(userId)) {
         connections.set(userId, new Set());
       }
       connections.get(userId).add(ws);
       console.log(`[WS] User ${userId} connected (${connections.get(userId).size} sockets)`);
 
-      // Handle disconnect
+      ws.send(JSON.stringify({
+        event: 'CONNECTED',
+        data: { userId, timestamp: new Date().toISOString() }
+      }));
+
       ws.on('close', () => {
         const userSockets = connections.get(userId);
         if (userSockets) {
           userSockets.delete(ws);
-          if (userSockets.size === 0) connections.delete(userId);
+          if (userSockets.size === 0) {
+            connections.delete(userId);
+          }
         }
         console.log(`[WS] User ${userId} disconnected`);
       });
 
-      // Handle errors
       ws.on('error', (err) => {
-        console.error(`[WS] Error for user ${userId}:`, err.message);
+        console.error(`[WS] Socket error for user ${userId}:`, err.message);
       });
 
-      // Send welcome message
-      ws.send(JSON.stringify({ event: 'CONNECTED', data: { user_id: userId } }));
-
     } catch (err) {
-      console.error('[WS] Connection auth failed:', err.message);
-      ws.close(4003, 'Authentication failed');
+      console.error('[WS] Connection handler error:', err.message);
+      ws.close(1011, 'Internal server error');
     }
   });
 
   console.log('[WS] WebSocket server attached on /v1/ws');
 }
 
-/**
- * Send a message to all WebSocket connections for a specific user.
- * @param {string} userId - Target user ID
- * @param {string} event  - Event name (e.g., 'MATCH_OFFER')
- * @param {Object} data   - Event payload
- */
 export function broadcast(userId, event, data) {
   const userSockets = connections.get(userId);
-  if (!userSockets || userSockets.size === 0) return;
+  if (!userSockets || userSockets.size === 0) {
+    return false;
+  }
 
-  const message = JSON.stringify({ event, data });
-  for (const ws of userSockets) {
-    if (ws.readyState === 1) { // WebSocket.OPEN
-      ws.send(message);
+  const payload = JSON.stringify({ event, data, timestamp: new Date().toISOString() });
+  let sentCount = 0;
+
+  for (const socket of userSockets) {
+    if (socket.readyState === 1) { // WebSocket.OPEN
+      socket.send(payload);
+      sentCount++;
     }
   }
+
+  return sentCount > 0;
 }
 
-/**
- * Send a message to all connected users with a specific role.
- * @param {string} role  - Target role (e.g., 'NGO')
- * @param {string} event - Event name
- * @param {Object} data  - Event payload
- */
 export function broadcastToRole(role, event, data) {
-  for (const [userId] of connections) {
-    const user = getById('users', userId);
-    if (user && user.role === role) {
-      broadcast(userId, event, data);
+  const payload = JSON.stringify({ event, data, timestamp: new Date().toISOString() });
+  let totalSent = 0;
+
+  for (const [userId, sockets] of connections.entries()) {
+    for (const socket of sockets) {
+      if (socket.readyState === 1) {
+        socket.send(payload);
+        totalSent++;
+      }
     }
   }
+
+  return totalSent;
+}
+
+export function getActiveConnectionCount() {
+  let count = 0;
+  for (const sockets of connections.values()) {
+    count += sockets.size;
+  }
+  return count;
 }

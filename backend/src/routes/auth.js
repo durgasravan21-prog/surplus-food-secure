@@ -1,11 +1,11 @@
 /**
  * ============================================================================
- * ANNAYOG — Auth & Session Routes
+ * ANNAYOG — Auth & Session Routes (Supabase Cloud Database)
  * ============================================================================
  */
 
 import express from 'express';
-import { newId, findUserByGoogleSub, getById, insert, updateById, deleteByColumn, findAll, getDb } from '../db/database.js';
+import { newId, findUserByGoogleSub, findUserByEmail, getById, insert, updateById, deleteByColumn, findAll } from '../db/supabase.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { exchangeGoogleCode } from '../utils/google.js';
 import { success, badRequest, unauthorized, conflict, serverError } from '../utils/envelope.js';
@@ -24,7 +24,15 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
 
     const profile = await exchangeGoogleCode(code, redirect_uri);
 
-    let user = findUserByGoogleSub(profile.sub);
+    let user = await findUserByGoogleSub(profile.sub);
+    if (!user && profile.email) {
+      user = await findUserByEmail(profile.email);
+      if (user && !user.google_sub) {
+        await updateById('users', user.id, { google_sub: profile.sub });
+        user.google_sub = profile.sub;
+      }
+    }
+
     let isNewUser = false;
 
     if (!user) {
@@ -38,7 +46,7 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
         role:                null,
         verification_status: 'PENDING_VERIFICATION',
         trust_score:         100,
-        suspended:           0,
+        suspended:           false,
         created_at:          new Date().toISOString(),
       };
       
@@ -52,13 +60,13 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
         user.verification_status = 'APPROVED';
       }
 
-      insert('users', user);
+      await insert('users', user);
 
       if (user.email === 'challagollasridevi@gmail.com') {
-        const existingDocs = findAll('verification_documents', { user_id: user.id });
+        const existingDocs = await findAll('verification_documents', { user_id: user.id });
         if (existingDocs.length === 0) {
           const docId = newId();
-          insert('verification_documents', {
+          await insert('verification_documents', {
             id: docId,
             user_id: user.id,
             doc_type: 'FSSAI_LICENSE',
@@ -71,9 +79,9 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
           });
         }
 
-        const existingProfile = getById('restaurant_profiles', user.id);
+        const existingProfile = await getById('restaurant_profiles', user.id);
         if (!existingProfile) {
-          insert('restaurant_profiles', {
+          await insert('restaurant_profiles', {
             user_id: user.id,
             business_name: 'Sridevi Restaurant',
             license_no: '12345678901234',
@@ -99,10 +107,10 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
           updates.verification_status = 'APPROVED';
         }
         
-        const existingDocs = findAll('verification_documents', { user_id: user.id });
+        const existingDocs = await findAll('verification_documents', { user_id: user.id });
         if (existingDocs.length === 0) {
           const docId = newId();
-          insert('verification_documents', {
+          await insert('verification_documents', {
             id: docId,
             user_id: user.id,
             doc_type: 'FSSAI_LICENSE',
@@ -115,9 +123,9 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
           });
         }
 
-        const existingProfile = getById('restaurant_profiles', user.id);
+        const existingProfile = await getById('restaurant_profiles', user.id);
         if (!existingProfile) {
-          insert('restaurant_profiles', {
+          await insert('restaurant_profiles', {
             user_id: user.id,
             business_name: 'Sridevi Restaurant',
             license_no: '12345678901234',
@@ -130,7 +138,7 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
       }
 
       if (Object.keys(updates).length > 0) {
-        updateById('users', user.id, updates);
+        await updateById('users', user.id, updates);
         Object.assign(user, updates);
       }
     }
@@ -139,7 +147,7 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
     const refresh_token = generateRefreshToken(user);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     
-    insert('refresh_tokens', {
+    await insert('refresh_tokens', {
       token: refresh_token,
       user_id: user.id,
       expires_at: expiresAt.toISOString(),
@@ -167,7 +175,7 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
 router.post('/auth/role', authenticate, async (req, res) => {
   try {
     const { role } = req.body;
-    const user = getById('users', req.user.id);
+    const user = await getById('users', req.user.id);
     if (!user) return badRequest(res, 'User not found');
 
     if (user.role) {
@@ -179,7 +187,7 @@ router.post('/auth/role', authenticate, async (req, res) => {
       return badRequest(res, `Invalid role. Must be one of: ${ALLOWED_ROLES.join(', ')}`);
     }
 
-    updateById('users', user.id, {
+    await updateById('users', user.id, {
       role: role,
       verification_status: 'PENDING_VERIFICATION'
     });
@@ -209,21 +217,21 @@ router.post('/auth/refresh', async (req, res) => {
       return unauthorized(res, 'Invalid or expired refresh token');
     }
 
-    const tokenData = getDb().prepare('SELECT * FROM refresh_tokens WHERE token = ?').get(refresh_token);
+    const tokenData = await getByColumn('refresh_tokens', 'token', refresh_token);
     if (!tokenData || tokenData.user_id !== decoded.user_id) {
       return unauthorized(res, 'Refresh token not recognised');
     }
 
-    getDb().prepare('DELETE FROM refresh_tokens WHERE token = ?').run(refresh_token);
+    await deleteByColumn('refresh_tokens', 'token', refresh_token);
 
-    const user = getById('users', decoded.user_id);
+    const user = await getById('users', decoded.user_id);
     if (!user) return unauthorized(res, 'User not found');
 
     const new_access_token  = generateAccessToken(user);
     const new_refresh_token = generateRefreshToken(user);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     
-    insert('refresh_tokens', {
+    await insert('refresh_tokens', {
       token: new_refresh_token,
       user_id: user.id,
       expires_at: expiresAt.toISOString(),
@@ -241,7 +249,7 @@ router.post('/auth/refresh', async (req, res) => {
 router.post('/auth/logout', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
-    deleteByColumn('refresh_tokens', 'user_id', userId);
+    await deleteByColumn('refresh_tokens', 'user_id', userId);
     logAudit(userId, 'USER_LOGOUT', 'User', userId, '{}');
     return success(res, { success: true });
   } catch (err) {

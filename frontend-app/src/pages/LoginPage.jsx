@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ROLES } from '../config/constants';
+import { ROLES, GOOGLE_CLIENT_ID } from '../config/constants';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -8,7 +8,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const handleGoogleLogin = () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = GOOGLE_CLIENT_ID || import.meta.env.VITE_GOOGLE_CLIENT_ID || '279708592172-ninf0l505s7p2cmind7m745lmlnvpi0f.apps.googleusercontent.com';
     const redirectUri = `${window.location.origin}/oauth/callback`;
     const scope = 'openid email profile';
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;

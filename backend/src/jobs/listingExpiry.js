@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { getDb, updateById } from '../db/database.js';
+import { findAll, updateById, updateByColumn } from '../db/supabase.js';
 import { logAudit } from '../services/audit.js';
 
 let broadcast = () => {};
@@ -11,33 +11,35 @@ async function loadBroadcast() {
   } catch { /* WebSocket not yet initialised */ }
 }
 
-function checkExpiredListings() {
-  const now = new Date();
-  
-  const activeListings = getDb().prepare("SELECT * FROM listings WHERE status NOT IN ('DELIVERED', 'EXPIRED', 'CANCELLED') AND best_before_at IS NOT NULL").all();
+async function checkExpiredListings() {
+  try {
+    const now = new Date();
+    const activeListings = await findAll('listings');
 
-  for (const listing of activeListings) {
-    if (new Date(listing.best_before_at) > now) continue;
+    for (const listing of activeListings) {
+      if (['DELIVERED', 'EXPIRED', 'CANCELLED'].includes(listing.status)) continue;
+      if (!listing.best_before_at) continue;
 
-    updateById('listings', listing.id, { status: 'EXPIRED' });
+      if (new Date(listing.best_before_at) > now) continue;
 
-    getDb().prepare(`UPDATE match_attempts SET outcome = 'EXPIRED', responded_at = ? WHERE listing_id = ? AND outcome = 'PENDING'`).run(now.toISOString(), listing.id);
+      await updateById('listings', listing.id, { status: 'EXPIRED' });
 
-    getDb().prepare(`UPDATE delivery_assignments SET status = 'EXPIRED' WHERE listing_id = ? AND status = 'PENDING'`).run(listing.id);
+      logAudit('system', 'LISTING_EXPIRED', 'Listing', listing.id, JSON.stringify({
+        donor_id: listing.donor_id,
+        best_before_at: listing.best_before_at,
+      }));
 
-    logAudit('system', 'LISTING_EXPIRED', 'Listing', listing.id, {
-      donor_id: listing.donor_id,
-      best_before_at: listing.best_before_at,
-    });
+      try {
+        broadcast(listing.donor_id, 'LISTING_STATUS_CHANGED', {
+          listing_id: listing.id,
+          status: 'EXPIRED',
+        });
+      } catch { /* ignore */ }
 
-    try {
-      broadcast(listing.donor_id, 'LISTING_STATUS_CHANGED', {
-        listing_id: listing.id,
-        status: 'EXPIRED',
-      });
-    } catch { /* ignore */ }
-
-    console.log(`[ListingExpiry] Listing ${listing.id} expired (best_before: ${listing.best_before_at})`);
+      console.log(`[ListingExpiry] Listing ${listing.id} expired (best_before: ${listing.best_before_at})`);
+    }
+  } catch (err) {
+    console.error('[ListingExpiry] Error running listing expiry job:', err.message);
   }
 }
 

@@ -1,6 +1,6 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.annayog.app/v1';
-export const WS_URL = import.meta.env.VITE_WS_URL || 'wss://api.annayog.app/v1/ws';
-export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/v1';
+export const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5000/v1/ws';
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '279708592172-ninf0l505s7p2cmind7m745lmlnvpi0f.apps.googleusercontent.com';
 
 export const ROLES = {
   RESTAURANT: 'RESTAURANT',

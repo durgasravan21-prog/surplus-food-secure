@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { getDb, updateById } from '../db/database.js';
+import { findAll } from '../db/supabase.js';
 import { logAudit } from '../services/audit.js';
 
 let triggerMatching = null;
@@ -13,32 +13,36 @@ async function loadDependencies() {
   }
 }
 
-function checkUnmatchedListings() {
-  if (!triggerMatching) return;
+async function checkUnmatchedListings() {
+  try {
+    if (!triggerMatching) return;
 
-  const now = Date.now();
-  const FIVE_MIN = 5 * 60 * 1000;
+    const now = Date.now();
+    const FIVE_MIN = 5 * 60 * 1000;
 
-  const listings = getDb().prepare("SELECT * FROM listings WHERE status = 'LISTED'").all();
+    const listings = await findAll('listings', { status: 'LISTED' });
 
-  for (const listing of listings) {
-    const age = now - new Date(listing.created_at).getTime();
-    if (age < FIVE_MIN) continue;
+    for (const listing of listings) {
+      const age = now - new Date(listing.created_at).getTime();
+      if (age < FIVE_MIN) continue;
 
-    const steps = Math.min(Math.floor(age / FIVE_MIN), 3);
-    const radiusBoost = steps * 2;
+      const steps = Math.min(Math.floor(age / FIVE_MIN), 3);
+      const radiusBoost = steps * 2;
 
-    const excludedMatches = getDb().prepare("SELECT ngo_id FROM match_attempts WHERE listing_id = ?").all(listing.id);
-    const excludedNgos = excludedMatches.map(m => m.ngo_id);
+      const matches = await findAll('match_attempts', { listing_id: listing.id });
+      const excludedNgos = matches.map(m => m.ngo_id);
 
-    console.log(`[RadiusWiden] Listing ${listing.id} unmatched for ${Math.floor(age/60000)}m, widening by +${radiusBoost}km`);
+      console.log(`[RadiusWiden] Listing ${listing.id} unmatched for ${Math.floor(age/60000)}m, widening by +${radiusBoost}km`);
 
-    triggerMatching(listing, excludedNgos);
+      triggerMatching(listing, excludedNgos);
 
-    logAudit('system', 'RADIUS_WIDENED', 'Listing', listing.id, {
-      age_minutes: Math.floor(age / 60000),
-      radius_boost_km: radiusBoost,
-    });
+      logAudit('system', 'RADIUS_WIDENED', 'Listing', listing.id, JSON.stringify({
+        age_minutes: Math.floor(age / 60000),
+        radius_boost_km: radiusBoost,
+      }));
+    }
+  } catch (err) {
+    console.error('[RadiusWiden] Error widening search radius:', err.message);
   }
 }
 
