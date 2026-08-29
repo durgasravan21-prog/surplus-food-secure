@@ -39,8 +39,14 @@ export default function VerificationSubmitPage() {
       let payload = {};
 
       if (role === ROLES.RESTAURANT) {
+        const cleanLicense = form.license_no.trim();
+        if (!/^\d{14}$/.test(cleanLicense)) {
+          setError('FSSAI License Number must be a valid 14-digit numeric code (e.g. 11521034000123).');
+          setLoading(false);
+          return;
+        }
         const fileUrl = await uploadService.uploadFile(form.file, 'VERIFICATION_DOC');
-        payload = { doc_type: 'FSSAI_LICENSE', license_no: form.license_no, file_url: fileUrl };
+        payload = { doc_type: 'FSSAI_LICENSE', license_no: cleanLicense, file_url: fileUrl };
       } else if (role === ROLES.INDIVIDUAL_DONOR) {
         const fileUrl = await uploadService.uploadFile(form.file, 'VERIFICATION_DOC');
         payload = { doc_type: 'GOVT_ID', license_no: form.id_number, file_url: fileUrl };

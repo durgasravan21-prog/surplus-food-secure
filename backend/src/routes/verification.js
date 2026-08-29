@@ -18,6 +18,12 @@ router.post('/verification/submit', authenticate, async (req, res) => {
       vehicle_type, id_file_url, selfie_file_url
     } = req.body;
 
+    if (doc_type === 'FSSAI_LICENSE') {
+      if (!license_no || !/^\d{14}$/.test(license_no.trim())) {
+        return badRequest(res, 'FSSAI License number must be a 14-digit numeric code');
+      }
+    }
+
     const identifier = license_no || reg_no;
     
     if (identifier) {
