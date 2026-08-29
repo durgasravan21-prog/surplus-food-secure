@@ -43,7 +43,8 @@ const DEMO_USERS = {
   },
   [ROLES.ADMIN]: {
     user_id: 'demo-admin-05',
-    email: 'admin@annayog.app',
+    email: 'durgasravan21@gmail.com',
+    name: 'Durga Sravan',
     role: ROLES.ADMIN,
     verification_status: VERIFICATION_STATUS.APPROVED,
   },
