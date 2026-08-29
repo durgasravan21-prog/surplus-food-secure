@@ -29,7 +29,7 @@ const ROLE_NAVIGATION = {
   ],
   [ROLES.NGO]: [
     { section: 'Shelter Intake', items: [
-      { to: '/dashboard/matched', label: 'Incoming Match Inbox' },
+      { to: '/dashboard', label: 'Match Inbox & Capacity', end: true },
       { to: '/dashboard/board', label: 'Public Claim Board' },
       { to: '/dashboard/listings', label: 'Received Deliveries' },
     ]},
@@ -40,7 +40,7 @@ const ROLE_NAVIGATION = {
   ],
   [ROLES.DELIVERY_PARTNER]: [
     { section: 'Volunteer Dispatch', items: [
-      { to: '/dashboard/offers', label: 'Available Pickup Offers' },
+      { to: '/dashboard', label: 'Available Pickup Offers', end: true },
       { to: '/dashboard/active', label: 'Live Delivery Stepper' },
     ]},
     { section: 'Account', items: [
@@ -70,7 +70,7 @@ const ALL_ROLES = [
 
 export default function DashboardLayout() {
   const { user, logout, switchDemoRole } = useAuth();
-  const { listings, activeDelivery, ngoCapacity } = useDemoData();
+  const { listings } = useDemoData();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -80,15 +80,7 @@ export default function DashboardLayout() {
 
   const handleRoleChange = (roleKey) => {
     switchDemoRole(roleKey);
-    if (roleKey === ROLES.NGO) {
-      navigate('/dashboard/matched');
-    } else if (roleKey === ROLES.DELIVERY_PARTNER) {
-      navigate('/dashboard/offers');
-    } else if (roleKey === ROLES.ADMIN) {
-      navigate('/dashboard/verification-queue');
-    } else {
-      navigate('/dashboard');
-    }
+    navigate('/dashboard');
   };
 
   const roleNavGroups = ROLE_NAVIGATION[user?.role] || ROLE_NAVIGATION[ROLES.RESTAURANT];
@@ -107,14 +99,9 @@ export default function DashboardLayout() {
             <span className="brand-name">Annayog</span>
             <span className="brand-badge-stitch">Stitch AI 2.0</span>
           </div>
-
-          <div className="topbar-search-box">
-            <span className="search-icon">Search:</span>
-            <input type="text" placeholder="Search listings, NGOs, FSSAI licenses, riders..." />
-          </div>
         </div>
 
-        {/* Interactive Stitch Role Switcher */}
+        {/* Interactive Stitch Persona Switcher */}
         <div className="demo-role-switcher">
           <span className="demo-label">Persona View:</span>
           <div className="role-pills">
@@ -134,7 +121,7 @@ export default function DashboardLayout() {
         <div className="topbar-right">
           <div className="system-indicator">
             <span className="indicator-pulse"></span>
-            <span>AI Dispatch Engine Online</span>
+            <span>AI Dispatch Online</span>
           </div>
 
           <div className="user-profile-widget">
@@ -170,11 +157,8 @@ export default function DashboardLayout() {
                     className={({ isActive }) => `stitch-nav-item ${isActive ? 'active' : ''}`}
                   >
                     <span>{item.label}</span>
-                    {item.to === '/dashboard/matched' && pendingNgoMatches > 0 && (
+                    {item.to === '/dashboard' && user?.role === ROLES.NGO && pendingNgoMatches > 0 && (
                       <span className="nav-count-badge">{pendingNgoMatches}</span>
-                    )}
-                    {item.to === '/dashboard/offers' && (
-                      <span className="nav-count-badge">1</span>
                     )}
                   </NavLink>
                 ))}

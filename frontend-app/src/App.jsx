@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { DemoDataProvider } from './context/DemoDataContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ROLES } from './config/constants';
@@ -9,11 +9,11 @@ import LoginPage from './pages/LoginPage';
 import OAuthCallback from './pages/OAuthCallback';
 import SelectRolePage from './pages/SelectRolePage';
 import DashboardLayout from './pages/DashboardLayout';
+import DashboardOverview from './pages/DashboardOverview';
 import DonorDashboard from './pages/DonorDashboard';
 import NGODashboard from './pages/NGODashboard';
 import CreateListingPage from './pages/CreateListingPage';
 import MyListingsPage from './pages/MyListingsPage';
-import MatchInboxPage from './pages/MatchInboxPage';
 import BrowseBoardPage from './pages/BrowseBoardPage';
 import DeliveryOffersPage from './pages/DeliveryOffersPage';
 import ActiveDeliveryPage from './pages/ActiveDeliveryPage';
@@ -23,23 +23,6 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import VerificationQueuePage from './pages/VerificationQueuePage';
 
 import './App.css';
-
-function RoleDashboard() {
-  const { user } = useAuth();
-  
-  switch (user?.role) {
-    case ROLES.NGO:
-      return <NGODashboard />;
-    case ROLES.DELIVERY_PARTNER:
-      return <DeliveryOffersPage />;
-    case ROLES.ADMIN:
-      return <AdminDashboardPage />;
-    case ROLES.INDIVIDUAL_DONOR:
-    case ROLES.RESTAURANT:
-    default:
-      return <DonorDashboard />;
-  }
-}
 
 function App() {
   return (
@@ -70,7 +53,7 @@ function App() {
               <ProtectedRoute><DashboardLayout /></ProtectedRoute>
             }>
               {/* Dynamic Overview Index Route */}
-              <Route index element={<RoleDashboard />} />
+              <Route index element={<DashboardOverview />} />
 
               {/* Donor routes */}
               <Route path="listings/new" element={
