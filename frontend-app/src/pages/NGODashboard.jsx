@@ -1,8 +1,11 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useDemoData } from '../context/DemoDataContext';
 import { LISTING_STATUS } from '../config/constants';
 import { useCountdown } from '../hooks/useCountdown';
+import { matchingService } from '../services/matching';
+import { listingsService } from '../services/listings';
+import { wsManager } from '../services/websocket';
 import './NGODashboard.css';
 
 function MatchCard({ match, onAccept, onDecline }) {
@@ -79,21 +82,88 @@ function MatchCard({ match, onAccept, onDecline }) {
 
 export default function NGODashboard() {
   const { user } = useAuth();
-  const { listings, ngoCapacity, acceptNgoMatch, declineNgoMatch, toggleAutoMatch } = useDemoData();
+  
+  const [pendingMatches, setPendingMatches] = useState([]);
+  const [boardListingsCount, setBoardListingsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [autoMatchEnabled, setAutoMatchEnabled] = useState(true);
 
-  // Active match offers offered to this NGO
-  const pendingMatches = listings.filter(
-    (l) => l.status === LISTING_STATUS.MATCHED_PENDING_NGO_ACCEPT
-  );
-
-  const handleAccept = (id) => {
-    acceptNgoMatch(id);
-    alert('Match Accepted! Row-level lock acquired and Delivery Partner auto-assigned.');
+  // Mocked ngoCapacity since we don't have an endpoint specified for capacity, we'll assume it comes with the user profile or default.
+  const ngoCapacity = {
+    daily_capacity: 500,
+    daily_claimed: 150,
+    remaining: 350
   };
 
-  const handleDecline = (id) => {
-    declineNgoMatch(id);
+  const fetchMatches = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [matchesRes, boardRes] = await Promise.all([
+        matchingService.getMatched(),
+        listingsService.getBoard()
+      ]);
+      setPendingMatches(matchesRes.data || []);
+      // Assuming getBoard returns all LISTED status items
+      setBoardListingsCount(boardRes.data?.length || 0);
+    } catch (err) {
+      console.error('Error fetching NGO matches:', err);
+      setError('Failed to load match offers.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
+
+  useEffect(() => {
+    const handleMatchOffer = () => {
+      fetchMatches();
+    };
+    const unsubscribe = wsManager.on('MATCH_OFFER', handleMatchOffer);
+    return () => unsubscribe();
+  }, [fetchMatches]);
+
+  const handleAccept = async (id) => {
+    try {
+      await matchingService.accept(id);
+      alert('Match Accepted! Row-level lock acquired and Delivery Partner auto-assigned.');
+      fetchMatches();
+    } catch (err) {
+      console.error('Error accepting match:', err);
+      alert('Failed to accept match.');
+    }
   };
+
+  const handleDecline = async (id) => {
+    try {
+      await matchingService.decline(id);
+      fetchMatches();
+    } catch (err) {
+      console.error('Error declining match:', err);
+    }
+  };
+
+  const handleToggleAutoMatch = async () => {
+    try {
+      const newVal = !autoMatchEnabled;
+      await matchingService.toggleAutoMatch(newVal);
+      setAutoMatchEnabled(newVal);
+    } catch (err) {
+      console.error('Error toggling auto match:', err);
+    }
+  };
+
+  if (loading && pendingMatches.length === 0) {
+    return <div className="stitch-ngo-portal"><div style={{ padding: '24px' }}>Loading dashboard data...</div></div>;
+  }
+
+  if (error) {
+    return <div className="stitch-ngo-portal"><div style={{ padding: '24px', color: '#ef4444' }}>{error}</div></div>;
+  }
 
   return (
     <div className="stitch-ngo-portal">
@@ -109,13 +179,13 @@ export default function NGODashboard() {
           <div className="toggle-container">
             <span className="toggle-title">AI Auto-Match</span>
             <div
-              className={`stitch-switch ${ngoCapacity.auto_match_enabled ? 'active' : ''}`}
-              onClick={toggleAutoMatch}
+              className={`stitch-switch ${autoMatchEnabled ? 'active' : ''}`}
+              onClick={handleToggleAutoMatch}
             >
               <div className="switch-thumb" />
             </div>
-            <span className={`switch-status ${ngoCapacity.auto_match_enabled ? 'on' : 'off'}`}>
-              {ngoCapacity.auto_match_enabled ? 'Active (Receiving Matches)' : 'Paused'}
+            <span className={`switch-status ${autoMatchEnabled ? 'on' : 'off'}`}>
+              {autoMatchEnabled ? 'Active (Receiving Matches)' : 'Paused'}
             </span>
           </div>
         </div>
@@ -148,7 +218,7 @@ export default function NGODashboard() {
         <div className="stitch-metric-card">
           <span className="metric-label">Public Claim Board</span>
           <div className="metric-number">
-            {listings.filter((l) => l.status === LISTING_STATUS.LISTED).length} <span className="unit">available</span>
+            {boardListingsCount} <span className="unit">available</span>
           </div>
           <span className="metric-footnote">
             <Link to="/dashboard/board" style={{ color: '#15803d', fontWeight: 600 }}>

@@ -1,15 +1,5 @@
-/**
- * ============================================================================
- * ANNAYOG — Listing Expiry Background Job
- * ============================================================================
- * Runs every minute. Auto-expires listings whose best_before_at
- * timestamp has passed without being delivered. Expired listings
- * are removed from all queues and the donor is notified.
- * ============================================================================
- */
-
 import cron from 'node-cron';
-import { listings, matchAttempts, deliveryAssignments } from '../store/index.js';
+import { getDb, updateById } from '../db/database.js';
 import { logAudit } from '../services/audit.js';
 
 let broadcast = () => {};
@@ -23,56 +13,36 @@ async function loadBroadcast() {
 
 function checkExpiredListings() {
   const now = new Date();
+  
+  const activeListings = getDb().prepare("SELECT * FROM listings WHERE status NOT IN ('DELIVERED', 'EXPIRED', 'CANCELLED') AND best_before_at IS NOT NULL").all();
 
-  for (const [id, listing] of listings) {
-    // Skip already terminal states
-    if (['DELIVERED', 'EXPIRED', 'CANCELLED'].includes(listing.status)) continue;
-
-    // Check if best_before has passed
-    if (!listing.best_before_at) continue;
+  for (const listing of activeListings) {
     if (new Date(listing.best_before_at) > now) continue;
 
-    // Expire the listing
-    listing.status = 'EXPIRED';
-    listings.set(id, listing);
+    updateById('listings', listing.id, { status: 'EXPIRED' });
 
-    // Cancel any pending match attempts for this listing
-    for (const [matchId, match] of matchAttempts) {
-      if (match.listing_id === id && match.outcome === 'PENDING') {
-        match.outcome = 'EXPIRED';
-        match.responded_at = now.toISOString();
-        matchAttempts.set(matchId, match);
-      }
-    }
+    getDb().prepare(`UPDATE match_attempts SET outcome = 'EXPIRED', responded_at = ? WHERE listing_id = ? AND outcome = 'PENDING'`).run(now.toISOString(), listing.id);
 
-    // Cancel any pending delivery assignments
-    for (const [assignId, assignment] of deliveryAssignments) {
-      if (assignment.listing_id === id && assignment.status === 'PENDING') {
-        assignment.status = 'EXPIRED';
-        deliveryAssignments.set(assignId, assignment);
-      }
-    }
+    getDb().prepare(`UPDATE delivery_assignments SET status = 'EXPIRED' WHERE listing_id = ? AND status = 'PENDING'`).run(listing.id);
 
-    logAudit('SYSTEM', 'LISTING_EXPIRED', 'Listing', id, {
+    logAudit('system', 'LISTING_EXPIRED', 'Listing', listing.id, {
       donor_id: listing.donor_id,
       best_before_at: listing.best_before_at,
     });
 
-    // Notify donor
     try {
       broadcast(listing.donor_id, 'LISTING_STATUS_CHANGED', {
-        listing_id: id,
+        listing_id: listing.id,
         status: 'EXPIRED',
       });
     } catch { /* ignore */ }
 
-    console.log(`[ListingExpiry] Listing ${id} expired (best_before: ${listing.best_before_at})`);
+    console.log(`[ListingExpiry] Listing ${listing.id} expired (best_before: ${listing.best_before_at})`);
   }
 }
 
 export function startListingExpiryJob() {
   loadBroadcast();
-  // Run every minute
   cron.schedule('* * * * *', checkExpiredListings);
   console.log('[Jobs] Listing expiry checker started (every 60 seconds)');
 }

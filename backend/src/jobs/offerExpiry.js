@@ -1,27 +1,7 @@
-/**
- * ============================================================================
- * ANNAYOG — Offer Expiry Background Job
- * ============================================================================
- * Runs every 30 seconds. Checks for expired match offers and delivery
- * offers, auto-declines them, and cascades to the next eligible
- * candidate. This ensures food doesn't stay stuck waiting for a
- * response that never comes.
- *
- * Match offers expire after 10 minutes (set in matchingEngine.js).
- * Delivery offers expire after 5 minutes (set in deliveryAssignment.js).
- * ============================================================================
- */
-
 import cron from 'node-cron';
-import {
-  matchAttempts,
-  deliveryAssignments,
-  listings,
-  conditionalUpdate,
-} from '../store/index.js';
+import { getDb, updateById, getById } from '../db/database.js';
 import { logAudit } from '../services/audit.js';
 
-// These will be dynamically imported to avoid circular dependency issues
 let triggerMatching = null;
 let triggerDeliveryAssignment = null;
 
@@ -43,71 +23,53 @@ async function loadDependencies() {
 function checkExpiredOffers() {
   const now = new Date();
 
-  // ── Check expired match offers ──────────────────────────────────────────
-  for (const [id, match] of matchAttempts) {
-    if (match.outcome !== 'PENDING') continue;
-    if (!match.expires_at) continue;
+  const pendingMatches = getDb().prepare("SELECT * FROM match_attempts WHERE outcome = 'PENDING' AND expires_at IS NOT NULL").all();
+  
+  for (const match of pendingMatches) {
     if (new Date(match.expires_at) > now) continue;
 
-    // Expire this match offer
-    match.outcome = 'EXPIRED';
-    match.responded_at = now.toISOString();
-    matchAttempts.set(id, match);
+    updateById('match_attempts', match.id, { outcome: 'EXPIRED', responded_at: now.toISOString() });
 
-    logAudit('SYSTEM', 'MATCH_OFFER_EXPIRED', 'MatchAttempt', id, {
+    logAudit('system', 'MATCH_OFFER_EXPIRED', 'MatchAttempt', match.id, {
       listing_id: match.listing_id,
       ngo_id: match.ngo_id,
     });
 
-    console.log(`[OfferExpiry] Match ${id} expired for NGO ${match.ngo_id}`);
+    console.log(`[OfferExpiry] Match ${match.id} expired for NGO ${match.ngo_id}`);
 
-    // Cascade: re-trigger matching excluding all NGOs that already declined/expired
     if (triggerMatching) {
-      const listing = listings.get(match.listing_id);
+      const listing = getById('listings', match.listing_id);
       if (listing && listing.status === 'MATCHED_PENDING_NGO_ACCEPT') {
-        // Reset listing to LISTED so matching can re-run
-        listing.status = 'LISTED';
-        listings.set(listing.id, listing);
+        updateById('listings', listing.id, { status: 'LISTED' });
 
-        // Collect all NGOs that have been offered this listing
-        const excludedNgos = [];
-        for (const m of matchAttempts.values()) {
-          if (m.listing_id === match.listing_id && m.outcome !== 'PENDING') {
-            excludedNgos.push(m.ngo_id);
-          }
-        }
-        triggerMatching(listing, excludedNgos);
+        const excludedMatches = getDb().prepare("SELECT ngo_id FROM match_attempts WHERE listing_id = ? AND outcome != 'PENDING'").all(listing.id);
+        const excludedNgos = excludedMatches.map(m => m.ngo_id);
+        
+        triggerMatching(getById('listings', listing.id), excludedNgos);
       }
     }
   }
 
-  // ── Check expired delivery offers ──────────────────────────────────────
-  for (const [id, assignment] of deliveryAssignments) {
-    if (assignment.status !== 'PENDING') continue;
-    if (!assignment.expires_at) continue;
+  const pendingDeliveries = getDb().prepare("SELECT * FROM delivery_assignments WHERE status = 'PENDING' AND expires_at IS NOT NULL").all();
+  
+  for (const assignment of pendingDeliveries) {
     if (new Date(assignment.expires_at) > now) continue;
 
-    // Expire this delivery offer
-    assignment.status = 'EXPIRED';
-    deliveryAssignments.set(id, assignment);
+    updateById('delivery_assignments', assignment.id, { status: 'EXPIRED' });
 
-    logAudit('SYSTEM', 'DELIVERY_OFFER_EXPIRED', 'DeliveryAssignment', id, {
+    logAudit('system', 'DELIVERY_OFFER_EXPIRED', 'DeliveryAssignment', assignment.id, {
       listing_id: assignment.listing_id,
       partner_id: assignment.partner_id,
     });
 
-    console.log(`[OfferExpiry] Delivery ${id} expired for partner ${assignment.partner_id}`);
+    console.log(`[OfferExpiry] Delivery ${assignment.id} expired for partner ${assignment.partner_id}`);
 
-    // Cascade: re-trigger delivery assignment excluding expired partners
     if (triggerDeliveryAssignment) {
-      const listing = listings.get(assignment.listing_id);
+      const listing = getById('listings', assignment.listing_id);
       if (listing) {
-        const excludedPartners = [];
-        for (const a of deliveryAssignments.values()) {
-          if (a.listing_id === assignment.listing_id && a.status !== 'PENDING') {
-            excludedPartners.push(a.partner_id);
-          }
-        }
+        const excludedAssignments = getDb().prepare("SELECT partner_id FROM delivery_assignments WHERE listing_id = ? AND status != 'PENDING'").all(listing.id);
+        const excludedPartners = excludedAssignments.map(a => a.partner_id);
+        
         triggerDeliveryAssignment(listing, assignment.match_ngo_id, excludedPartners);
       }
     }
@@ -116,7 +78,6 @@ function checkExpiredOffers() {
 
 export function startOfferExpiryJob() {
   loadDependencies().then(() => {
-    // Run every 30 seconds
     cron.schedule('*/30 * * * * *', checkExpiredOffers);
     console.log('[Jobs] Offer expiry checker started (every 30 seconds)');
   });

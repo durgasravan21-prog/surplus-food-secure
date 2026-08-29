@@ -1,13 +1,59 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useDemoData } from '../context/DemoDataContext';
 import { LISTING_STATUS } from '../config/constants';
+import { statsService } from '../services/stats';
+import { verificationService } from '../services/verification';
+import { listingsService } from '../services/listings';
 
 export default function AdminDashboardPage() {
-  const { listings, verifications } = useDemoData();
+  const [metrics, setMetrics] = useState({
+    matchRate: '94.2%',
+    avgTimeSeconds: 84,
+    activeDispatches: 0,
+  });
+  const [pendingVerifications, setPendingVerifications] = useState(0);
+  const [networkListings, setNetworkListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const pendingVerifications = verifications.filter((v) => v.status === 'PENDING').length;
-  const activeDispatches = listings.filter((l) => l.status === LISTING_STATUS.DELIVERY_ASSIGNED || l.status === LISTING_STATUS.MATCHED_PENDING_NGO_ACCEPT).length;
-  const totalDelivered = listings.filter((l) => l.status === LISTING_STATUS.DELIVERED).length;
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        setLoading(true);
+        const [dashboardRes, queueRes, listingsRes] = await Promise.all([
+          statsService.getAdminDashboard().catch(() => ({ data: {} })),
+          verificationService.getQueue().catch(() => ({ data: [] })),
+          listingsService.getMine().catch(() => ({ data: [] }))
+        ]);
+        
+        const listings = listingsRes.data || [];
+        const activeDispatches = listings.filter((l) => l.status === LISTING_STATUS.DELIVERY_ASSIGNED || l.status === LISTING_STATUS.MATCHED_PENDING_NGO_ACCEPT).length;
+        
+        setMetrics({
+          matchRate: dashboardRes.data?.match_rate || '94.2%',
+          avgTimeSeconds: dashboardRes.data?.avg_time_seconds || 84,
+          activeDispatches: dashboardRes.data?.active_dispatches ?? activeDispatches,
+        });
+        
+        setPendingVerifications(queueRes.data?.length || 0);
+        setNetworkListings(listings);
+      } catch (err) {
+        console.error('Error fetching admin data:', err);
+        setError('Failed to load admin dashboard.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAdminData();
+  }, []);
+
+  if (loading && networkListings.length === 0) {
+    return <div className="stitch-dashboard"><div style={{ padding: '24px' }}>Loading command center...</div></div>;
+  }
+
+  if (error) {
+    return <div className="stitch-dashboard"><div style={{ padding: '24px', color: '#ef4444' }}>{error}</div></div>;
+  }
 
   return (
     <div className="stitch-dashboard">
@@ -27,19 +73,19 @@ export default function AdminDashboardPage() {
       <div className="stitch-metrics-grid">
         <div className="stitch-metric-card">
           <span className="metric-label">Network Match Rate</span>
-          <div className="metric-number">94.2%</div>
+          <div className="metric-number">{metrics.matchRate}</div>
           <span className="metric-footnote">AI distance & perishability algorithm</span>
         </div>
 
         <div className="stitch-metric-card">
           <span className="metric-label">Avg. Time to Match</span>
-          <div className="metric-number">84 <span className="unit">seconds</span></div>
+          <div className="metric-number">{metrics.avgTimeSeconds} <span className="unit">seconds</span></div>
           <span className="metric-footnote">From publish to NGO reservation</span>
         </div>
 
         <div className="stitch-metric-card">
           <span className="metric-label">Active Dispatches</span>
-          <div className="metric-number">{activeDispatches}</div>
+          <div className="metric-number">{metrics.activeDispatches}</div>
           <span className="metric-footnote">Live pickups & deliveries in transit</span>
         </div>
 
@@ -75,7 +121,7 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {listings.map((l) => (
+              {networkListings.map((l) => (
                 <tr key={l.id}>
                   <td><span style={{ fontWeight: 700, color: '#0f172a' }}>{l.id}</span></td>
                   <td>{l.donor_name}</td>

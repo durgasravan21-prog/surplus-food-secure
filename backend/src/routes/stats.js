@@ -1,33 +1,31 @@
 import express from 'express';
-import { listings as storeListings, matchAttempts as storeMatches } from '../store/index.js';
+import { getDb } from '../db/database.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorize } from '../middleware/authorize.js';
 import { success } from '../utils/envelope.js';
 
 const router = express.Router();
 
-// GET /stats/impact (authenticate)
 router.get('/stats/impact', authenticate, (req, res) => {
-  let listings = Array.from(storeListings.values());
   const { user_id } = req.query;
-
+  
+  let userFilter = '';
+  const params = [];
   if (user_id) {
-    listings = listings.filter(l => l.donor_id === user_id);
+    userFilter = 'WHERE donor_id = ?';
+    params.push(user_id);
   }
 
-  let meals_rescued = 0;
-  let listings_delivered = 0;
-  let listings_expired = 0;
+  const result = getDb().prepare(`
+    SELECT
+      COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN quantity_meals ELSE 0 END), 0) as meals_rescued,
+      COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN 1 ELSE 0 END), 0) as listings_delivered,
+      COALESCE(SUM(CASE WHEN status = 'EXPIRED' THEN 1 ELSE 0 END), 0) as listings_expired
+    FROM listings
+    ${userFilter}
+  `).get(...params);
 
-  for (const listing of listings) {
-    if (listing.status === 'DELIVERED') {
-      meals_rescued += listing.quantity_meals || 0;
-      listings_delivered++;
-    } else if (listing.status === 'EXPIRED') {
-      listings_expired++;
-    }
-  }
-
+  const meals_rescued = result.meals_rescued;
   const kg_saved = meals_rescued * 0.5;
   const co2e_kg_estimate = kg_saved * 2.5;
 
@@ -35,15 +33,23 @@ router.get('/stats/impact', authenticate, (req, res) => {
     meals_rescued,
     kg_saved,
     co2e_kg_estimate,
-    listings_delivered,
-    listings_expired
+    listings_delivered: result.listings_delivered,
+    listings_expired: result.listings_expired
   });
 });
 
-// GET /admin/dashboard (authenticate, authorize('ADMIN'))
 router.get('/admin/dashboard', authenticate, authorize('ADMIN'), (req, res) => {
-  const listings = Array.from(storeListings.values());
-  const total_listings = listings.length;
+  const stats = getDb().prepare(`
+    SELECT
+      COUNT(*) as total_listings,
+      COALESCE(SUM(CASE WHEN created_at >= datetime('now', '-1 day') THEN 1 ELSE 0 END), 0) as listings_today,
+      COALESCE(SUM(CASE WHEN status IN ('MATCHED', 'DELIVERY_ASSIGNED', 'PARTNER_ARRIVED_PICKUP', 'PICKED_UP', 'DELIVERED') THEN 1 ELSE 0 END), 0) as matched_count,
+      COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN 1 ELSE 0 END), 0) as delivered_count,
+      COALESCE(SUM(CASE WHEN status = 'EXPIRED' THEN 1 ELSE 0 END), 0) as expired_count
+    FROM listings
+  `).get();
+
+  const total_listings = stats.total_listings;
   
   if (total_listings === 0) {
     return success(res, {
@@ -56,49 +62,21 @@ router.get('/admin/dashboard', authenticate, authorize('ADMIN'), (req, res) => {
     });
   }
 
-  const now = Date.now();
-  const oneDay = 24 * 60 * 60 * 1000;
-  
-  let listings_today = 0;
-  let matched_count = 0;
-  let delivered_count = 0;
-  let expired_count = 0;
-  let total_match_time = 0;
-  let matches_with_time = 0;
+  const avgTimeStats = getDb().prepare(`
+    SELECT COALESCE(AVG((julianday(m.offered_at) - julianday(l.created_at)) * 86400), 0) as avg_time
+    FROM listings l
+    JOIN match_attempts m ON l.id = m.listing_id
+    WHERE l.status IN ('MATCHED', 'DELIVERY_ASSIGNED', 'PARTNER_ARRIVED_PICKUP', 'PICKED_UP', 'DELIVERED')
+    AND m.offered_at IS NOT NULL
+  `).get();
 
-  for (const listing of listings) {
-    if (now - new Date(listing.created_at).getTime() < oneDay) {
-      listings_today++;
-    }
-    
-    // Status can be MATCHED, DELIVERY_ASSIGNED, PARTNER_ARRIVED_PICKUP, PICKED_UP, DELIVERED
-    const matchedStatuses = ['MATCHED', 'DELIVERY_ASSIGNED', 'PARTNER_ARRIVED_PICKUP', 'PICKED_UP', 'DELIVERED'];
-    if (matchedStatuses.includes(listing.status)) {
-      matched_count++;
-      
-      const match = Array.from(storeMatches.values()).find(m => m.listing_id === listing.id);
-      if (match && match.offered_at && listing.created_at) { // used offered_at and created_at
-        total_match_time += (new Date(match.offered_at).getTime() - new Date(listing.created_at).getTime()) / 1000;
-        matches_with_time++;
-      }
-    }
-
-    if (listing.status === 'DELIVERED') {
-      delivered_count++;
-    }
-
-    if (listing.status === 'EXPIRED') {
-      expired_count++;
-    }
-  }
-
-  const matched_pct = (matched_count / total_listings) * 100;
-  const delivered_pct = (delivered_count / total_listings) * 100;
-  const expired_pct = (expired_count / total_listings) * 100;
-  const avg_time_to_match_seconds = matches_with_time > 0 ? total_match_time / matches_with_time : 0;
+  const matched_pct = (stats.matched_count / total_listings) * 100;
+  const delivered_pct = (stats.delivered_count / total_listings) * 100;
+  const expired_pct = (stats.expired_count / total_listings) * 100;
+  const avg_time_to_match_seconds = avgTimeStats.avg_time;
 
   return success(res, {
-    listings_today,
+    listings_today: stats.listings_today,
     total_listings,
     matched_pct,
     delivered_pct,

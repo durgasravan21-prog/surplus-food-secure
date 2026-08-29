@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate.js';
 import { success, badRequest } from '../utils/envelope.js';
-import { newId } from '../store/index.js';
+import { newId } from '../db/database.js';
 
 const router = Router();
 

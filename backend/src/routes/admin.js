@@ -1,8 +1,5 @@
-/**
- * Admin Routes
- */
 import { Router } from 'express';
-import { users, listings, matchAttempts, newId, ngoProfiles, deliveryPartnerProfiles } from '../store/index.js';
+import { getById, updateById, newId, insert, getDb } from '../db/database.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { authorize } from '../middleware/authorize.js';
 import { logAudit } from '../services/audit.js';
@@ -15,36 +12,36 @@ router.post('/admin/users/:id/suspend', authenticate, authorize('ADMIN'), (req, 
   const { reason } = req.body;
   const { id } = req.params;
   
-  const user = users.get(id);
+  const user = getById('users', id);
   if (!user) {
     return notFound(res, 'User not found');
   }
   
-  user.suspended = true;
+  updateById('users', id, { suspended: 1 });
   
   if (user.role === 'NGO') {
-    const profile = Array.from(ngoProfiles.values()).find(p => p.user_id === id);
-    if (profile) profile.auto_match_enabled = false;
+    const profile = getById('ngo_profiles', id);
+    if (profile) updateById('ngo_profiles', id, { auto_match_enabled: 0 });
   } else if (user.role === 'DELIVERY_PARTNER') {
-    const profile = Array.from(deliveryPartnerProfiles.values()).find(p => p.user_id === id);
-    if (profile) profile.status = 'OFFLINE';
+    const profile = getById('delivery_partner_profiles', id);
+    if (profile) updateById('delivery_partner_profiles', id, { status: 'OFFLINE' });
   }
   
-  logAudit(req.user.id, 'USER_SUSPENDED', 'User', id, { target_user_id: id, reason });
+  logAudit(req.user.id, 'USER_SUSPENDED', 'User', id, JSON.stringify({ target_user_id: id, reason }));
   return success(res, { success: true });
 });
 
 router.post('/admin/users/:id/reinstate', authenticate, authorize('ADMIN'), (req, res) => {
   const { id } = req.params;
   
-  const user = users.get(id);
+  const user = getById('users', id);
   if (!user) {
     return notFound(res, 'User not found');
   }
   
-  user.suspended = false;
+  updateById('users', id, { suspended: 0 });
   
-  logAudit(req.user.id, 'USER_REINSTATED', 'User', id, { target_user_id: id });
+  logAudit(req.user.id, 'USER_REINSTATED', 'User', id, JSON.stringify({ target_user_id: id }));
   return success(res, { success: true });
 });
 
@@ -52,14 +49,14 @@ router.patch('/admin/users/:id/role', authenticate, authorize('ADMIN'), (req, re
   const { role } = req.body;
   const { id } = req.params;
   
-  const user = users.get(id);
+  const user = getById('users', id);
   if (!user) {
     return notFound(res, 'User not found');
   }
   
-  user.role = role;
+  updateById('users', id, { role: role });
   
-  logAudit(req.user.id, 'USER_ROLE_CHANGED', 'User', id, { target_user_id: id, new_role: role });
+  logAudit(req.user.id, 'USER_ROLE_CHANGED', 'User', id, JSON.stringify({ target_user_id: id, new_role: role }));
   return success(res, { success: true, role });
 });
 
@@ -67,7 +64,7 @@ router.post('/admin/matches/:id/override', authenticate, authorize('ADMIN'), asy
   const { action, ngo_id } = req.body;
   const { id } = req.params;
   
-  const listing = listings.get(id);
+  const listing = getById('listings', id);
   if (!listing) {
     return notFound(res, 'Listing not found');
   }
@@ -76,7 +73,7 @@ router.post('/admin/matches/:id/override', authenticate, authorize('ADMIN'), asy
     if (!ngo_id) return badRequest(res, 'ngo_id required');
     
     const matchAttemptId = newId();
-    matchAttempts.set(matchAttemptId, {
+    insert('match_attempts', {
       id: matchAttemptId,
       listing_id: id,
       ngo_id: ngo_id,
@@ -87,19 +84,17 @@ router.post('/admin/matches/:id/override', authenticate, authorize('ADMIN'), asy
       distance_km: 0
     });
     
-    listing.status = 'NGO_ACCEPTED';
+    updateById('listings', id, { status: 'NGO_ACCEPTED' });
   } else if (action === 'FORCE_CANCEL') {
-    const activeMatch = Array.from(matchAttempts.values()).find(m => m.listing_id === id && m.outcome === 'PENDING');
-    if (activeMatch) {
-      activeMatch.outcome = 'CANCELLED';
-    }
-    listing.status = 'LISTED';
-    await triggerMatching(listing);
+    getDb().prepare(`UPDATE match_attempts SET outcome = 'CANCELLED' WHERE listing_id = ? AND outcome = 'PENDING'`).run(id);
+    updateById('listings', id, { status: 'LISTED' });
+    const updatedListing = getById('listings', id);
+    await triggerMatching(updatedListing);
   } else {
     return badRequest(res, 'Invalid action');
   }
   
-  logAudit(req.user.id, 'MATCH_OVERRIDDEN', 'Listing', id, { listing_id: id, action, ngo_id });
+  logAudit(req.user.id, 'MATCH_OVERRIDDEN', 'Listing', id, JSON.stringify({ listing_id: id, action, ngo_id }));
   return success(res, { success: true });
 });
 

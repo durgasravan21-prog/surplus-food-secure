@@ -1,22 +1,53 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useDemoData } from '../context/DemoDataContext';
 import { LISTING_STATUS, ROLES } from '../config/constants';
+import { listingsService } from '../services/listings';
+import { statsService } from '../services/stats';
+import { wsManager } from '../services/websocket';
 import './DonorDashboard.css';
 
 export default function DonorDashboard() {
   const { user } = useAuth();
-  const { listings } = useDemoData();
+  const [donorListings, setDonorListings] = useState([]);
+  const [impactStats, setImpactStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Filter listings relevant to this donor
-  const donorListings = listings.filter((l) =>
-    user?.role === ROLES.INDIVIDUAL_DONOR ? l.donor_role === ROLES.INDIVIDUAL_DONOR : l.donor_role === ROLES.RESTAURANT
-  );
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [listingsRes, impactRes] = await Promise.all([
+        listingsService.getMine(),
+        statsService.getImpact()
+      ]);
+      setDonorListings(listingsRes.data || []);
+      setImpactStats(impactRes.data || {});
+    } catch (err) {
+      console.error('Error fetching donor data:', err);
+      setError('Failed to load dashboard data.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const totalMeals = donorListings.reduce((sum, l) => sum + (l.quantity_meals || 0), 0);
-  const totalKg = (totalMeals * 0.45).toFixed(1);
-  const totalCo2e = (totalMeals * 1.18).toFixed(1);
-  const deliveredCount = donorListings.filter((l) => l.status === LISTING_STATUS.DELIVERED).length;
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    const handleStatusChanged = () => {
+      fetchDashboardData();
+    };
+    const unsubscribe = wsManager.on('LISTING_STATUS_CHANGED', handleStatusChanged);
+    return () => unsubscribe();
+  }, [fetchDashboardData]);
+
+  const totalMeals = impactStats?.total_meals ?? donorListings.reduce((sum, l) => sum + (l.quantity_meals || 0), 0);
+  const totalKg = impactStats?.total_kg ?? (totalMeals * 0.45).toFixed(1);
+  const totalCo2e = impactStats?.total_co2e ?? (totalMeals * 1.18).toFixed(1);
+  const deliveredCount = impactStats?.total_delivered ?? donorListings.filter((l) => l.status === LISTING_STATUS.DELIVERED).length;
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
@@ -31,6 +62,14 @@ export default function DonorDashboard() {
   };
 
   const isHomeDonor = user?.role === ROLES.INDIVIDUAL_DONOR;
+
+  if (loading && donorListings.length === 0) {
+    return <div className="stitch-dashboard"><div style={{ padding: '24px' }}>Loading dashboard data...</div></div>;
+  }
+
+  if (error) {
+    return <div className="stitch-dashboard"><div style={{ padding: '24px', color: '#ef4444' }}>{error}</div></div>;
+  }
 
   return (
     <div className="stitch-dashboard">

@@ -1,8 +1,5 @@
-/**
- * Delivery Assignment Service - matching listings to delivery partners.
- */
 import { haversineDistance } from '../utils/haversine.js';
-import { deliveryPartnerProfiles, deliveryAssignments, listings, users, newId, findAll, conditionalUpdate } from '../store/index.js';
+import { getById, newId, findAll, insert, getDb } from '../db/database.js';
 import { logAudit } from './audit.js';
 
 let broadcast = () => {};
@@ -14,43 +11,37 @@ try {
   // Ignore
 }
 
-/**
- * Triggers delivery assignment for a given listing.
- * @param {Object} listing 
- * @param {string} ngoUserId 
- * @param {Array<string>} excludePartnerIds 
- */
 export async function triggerDeliveryAssignment(listing, ngoUserId, excludePartnerIds = []) {
   const now = new Date();
   
-  // 1 & 2. Find eligible partners
-  const eligiblePartners = findAll(deliveryPartnerProfiles, (profile) => {
+  const allPartners = findAll('delivery_partner_profiles');
+
+  const eligiblePartners = allPartners.filter(profile => {
     if (excludePartnerIds.includes(profile.user_id)) return false;
     if (profile.status !== 'ONLINE') return false;
     
-    const user = users.get(profile.user_id);
+    const user = getById('users', profile.user_id);
     if (!user || user.verification_status !== 'APPROVED' || user.suspended) return false;
     
     const distance = haversineDistance(
-      listing.latitude, listing.longitude,
-      profile.latitude, profile.longitude
+      listing.lat, listing.lng,
+      profile.current_lat, profile.current_lng
     );
     
     if (distance > 15) return false;
     return true;
   });
 
-  logAudit('DELIVERY_ASSIGNMENT_TRIGGERED', 'system', { listing_id: listing.id, ngo_id: ngoUserId });
+  logAudit('system', 'DELIVERY_ASSIGNMENT_TRIGGERED', 'Listing', listing.id, { listing_id: listing.id, ngo_id: ngoUserId });
 
   if (eligiblePartners.length === 0) {
     return null; // NGO can self-arrange
   }
 
-  // 3. Sort by distance
   const scoredPartners = eligiblePartners.map(profile => {
     const distance = haversineDistance(
-      listing.latitude, listing.longitude,
-      profile.latitude, profile.longitude
+      listing.lat, listing.lng,
+      profile.current_lat, profile.current_lng
     );
     return { profile, distance };
   });
@@ -58,7 +49,6 @@ export async function triggerDeliveryAssignment(listing, ngoUserId, excludePartn
   scoredPartners.sort((a, b) => a.distance - b.distance);
   const bestPartner = scoredPartners[0];
 
-  // 4. Create DeliveryAssignment
   const assignmentId = newId();
   const expiresAt = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
   
@@ -74,12 +64,10 @@ export async function triggerDeliveryAssignment(listing, ngoUserId, excludePartn
     dropoff_photo_url: null
   };
   
-  deliveryAssignments.set(assignmentId, assignment);
+  insert('delivery_assignments', assignment);
 
-  // 5. Update listing status
-  conditionalUpdate(listings, listing.id, { status: 'DELIVERY_ASSIGNED' }, { status: 'NGO_ACCEPTED' });
+  getDb().prepare(`UPDATE listings SET status = 'DELIVERY_ASSIGNED' WHERE id = ? AND status = 'NGO_ACCEPTED'`).run(listing.id);
 
-  // 6. Broadcast
   try {
     broadcast(bestPartner.profile.user_id, 'DELIVERY_OFFER', {
       id: assignmentId,

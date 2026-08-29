@@ -2,19 +2,10 @@
  * ============================================================================
  * ANNAYOG — Auth & Session Routes
  * ============================================================================
- * Handles Google OAuth login, one-time role selection, token refresh,
- * and logout. These are the first endpoints a new user interacts with.
- *
- * Flow:
- *   1. POST /auth/google/callback  →  exchange Google code for JWT tokens
- *   2. POST /auth/role             →  one-time role selection
- *   3. POST /auth/refresh          →  rotate expired access token
- *   4. POST /auth/logout           →  invalidate refresh tokens
- * ============================================================================
  */
 
 import express from 'express';
-import { users, refreshTokens, newId, findUserByGoogleSub, restaurantProfiles, verificationDocs } from '../store/index.js';
+import { newId, findUserByGoogleSub, getById, insert, updateById, deleteByColumn, findAll, getDb } from '../db/database.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { exchangeGoogleCode } from '../utils/google.js';
 import { success, badRequest, unauthorized, conflict, serverError } from '../utils/envelope.js';
@@ -24,8 +15,6 @@ import { authLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// ── POST /auth/google/callback ──────────────────────────────────────────────
-// Exchanges Google auth code for our JWT tokens. Creates user on first login.
 router.post('/auth/google/callback', authLimiter, async (req, res) => {
   try {
     const { code, redirect_uri } = req.body;
@@ -33,10 +22,8 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
       return badRequest(res, 'Missing code or redirect_uri');
     }
 
-    // Exchange auth code with Google for user profile
     const profile = await exchangeGoogleCode(code, redirect_uri);
 
-    // Find existing user or create new one
     let user = findUserByGoogleSub(profile.sub);
     let isNewUser = false;
 
@@ -48,71 +35,117 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
         email:               profile.email,
         name:                profile.name,
         picture:             profile.picture,
-        role:                null,              // Must select role next
+        role:                null,
         verification_status: 'PENDING_VERIFICATION',
         trust_score:         100,
-        suspended:           false,
+        suspended:           0,
         created_at:          new Date().toISOString(),
       };
-      users.set(user.id, user);
-    }
-
-    // Auto-promote specific emails to ADMIN for hackathon convenience
-    if (user.email === 'durgasravan21@gmail.com' || user.email === 'admin@annayog.app') {
-      user.role = 'ADMIN';
-      user.verification_status = 'APPROVED';
-      users.set(user.id, user);
-    }
-
-    // Auto-approve and seed verification for specific emails for hackathon testing
-    if (user.email === 'challagollasridevi@gmail.com') {
-      user.role = 'RESTAURANT';
-      user.verification_status = 'APPROVED';
-      users.set(user.id, user);
-
-      // Create a mock verification document if it doesn't exist
-      const existingDoc = Array.from(verificationDocs.values()).find(d => d.user_id === user.id);
-      if (!existingDoc) {
-        const docId = newId();
-        verificationDocs.set(docId, {
-          id: docId,
-          user_id: user.id,
-          doc_type: 'FSSAI_LICENSE',
-          file_url: 'http://localhost:5000/uploads/default_license.pdf',
-          license_no: '12345678901234',
-          status: 'APPROVED',
-          submitted_at: new Date().toISOString(),
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: 'system'
-        });
+      
+      if (user.email === 'durgasravan21@gmail.com' || user.email === 'admin@annayog.app') {
+        user.role = 'ADMIN';
+        user.verification_status = 'APPROVED';
       }
 
-      // Create a mock restaurant profile if it doesn't exist
-      if (!restaurantProfiles.has(user.id)) {
-        restaurantProfiles.set(user.id, {
-          user_id: user.id,
-          business_name: 'Sridevi Restaurant',
-          license_no: '12345678901234',
-          address: 'Hyderabad, India',
-          lat: 17.3850,
-          lng: 78.4867,
-          verified_doc_url: 'http://localhost:5000/uploads/default_license.pdf'
-        });
+      if (user.email === 'challagollasridevi@gmail.com') {
+        user.role = 'RESTAURANT';
+        user.verification_status = 'APPROVED';
+      }
+
+      insert('users', user);
+
+      if (user.email === 'challagollasridevi@gmail.com') {
+        const existingDocs = findAll('verification_documents', { user_id: user.id });
+        if (existingDocs.length === 0) {
+          const docId = newId();
+          insert('verification_documents', {
+            id: docId,
+            user_id: user.id,
+            doc_type: 'FSSAI_LICENSE',
+            file_url: 'http://localhost:5000/uploads/default_license.pdf',
+            license_no: '12345678901234',
+            status: 'APPROVED',
+            submitted_at: new Date().toISOString(),
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: 'system'
+          });
+        }
+
+        const existingProfile = getById('restaurant_profiles', user.id);
+        if (!existingProfile) {
+          insert('restaurant_profiles', {
+            user_id: user.id,
+            business_name: 'Sridevi Restaurant',
+            license_no: '12345678901234',
+            address: 'Hyderabad, India',
+            lat: 17.3850,
+            lng: 78.4867,
+            verified_doc_url: 'http://localhost:5000/uploads/default_license.pdf'
+          });
+        }
+      }
+    } else {
+      let updates = {};
+      if (user.email === 'durgasravan21@gmail.com' || user.email === 'admin@annayog.app') {
+        if (user.role !== 'ADMIN' || user.verification_status !== 'APPROVED') {
+          updates.role = 'ADMIN';
+          updates.verification_status = 'APPROVED';
+        }
+      }
+      
+      if (user.email === 'challagollasridevi@gmail.com') {
+        if (user.role !== 'RESTAURANT' || user.verification_status !== 'APPROVED') {
+          updates.role = 'RESTAURANT';
+          updates.verification_status = 'APPROVED';
+        }
+        
+        const existingDocs = findAll('verification_documents', { user_id: user.id });
+        if (existingDocs.length === 0) {
+          const docId = newId();
+          insert('verification_documents', {
+            id: docId,
+            user_id: user.id,
+            doc_type: 'FSSAI_LICENSE',
+            file_url: 'http://localhost:5000/uploads/default_license.pdf',
+            license_no: '12345678901234',
+            status: 'APPROVED',
+            submitted_at: new Date().toISOString(),
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: 'system'
+          });
+        }
+
+        const existingProfile = getById('restaurant_profiles', user.id);
+        if (!existingProfile) {
+          insert('restaurant_profiles', {
+            user_id: user.id,
+            business_name: 'Sridevi Restaurant',
+            license_no: '12345678901234',
+            address: 'Hyderabad, India',
+            lat: 17.3850,
+            lng: 78.4867,
+            verified_doc_url: 'http://localhost:5000/uploads/default_license.pdf'
+          });
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updateById('users', user.id, updates);
+        Object.assign(user, updates);
       }
     }
 
-    // Generate JWT tokens
     const access_token  = generateAccessToken(user);
     const refresh_token = generateRefreshToken(user);
-
-    // Store refresh token for later validation
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    refreshTokens.set(refresh_token, {
-      user_id:    user.id,
+    
+    insert('refresh_tokens', {
+      token: refresh_token,
+      user_id: user.id,
       expires_at: expiresAt.toISOString(),
     });
 
-    logAudit(user.id, 'USER_LOGIN', 'User', user.id, { is_new_user: isNewUser });
+    logAudit(user.id, 'USER_LOGIN', 'User', user.id, JSON.stringify({ is_new_user: isNewUser }));
 
     return success(res, {
       access_token,
@@ -131,42 +164,37 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
   }
 });
 
-// ── POST /auth/role ─────────────────────────────────────────────────────────
-// One-time role selection. Cannot be changed by the user after setting.
 router.post('/auth/role', authenticate, async (req, res) => {
   try {
     const { role } = req.body;
-    const user = users.get(req.user.id);
+    const user = getById('users', req.user.id);
     if (!user) return badRequest(res, 'User not found');
 
-    // Prevent role re-selection
     if (user.role) {
       return conflict(res, 'Role already selected. Contact admin to change.');
     }
 
-    // Validate role value
     const ALLOWED_ROLES = ['RESTAURANT', 'INDIVIDUAL_DONOR', 'NGO', 'DELIVERY_PARTNER'];
     if (!ALLOWED_ROLES.includes(role)) {
       return badRequest(res, `Invalid role. Must be one of: ${ALLOWED_ROLES.join(', ')}`);
     }
 
-    user.role = role;
-    user.verification_status = 'PENDING_VERIFICATION';
-    users.set(user.id, user);
+    updateById('users', user.id, {
+      role: role,
+      verification_status: 'PENDING_VERIFICATION'
+    });
 
-    logAudit(user.id, 'ROLE_SELECTED', 'User', user.id, { role });
+    logAudit(user.id, 'ROLE_SELECTED', 'User', user.id, JSON.stringify({ role }));
 
     return success(res, {
-      role:                user.role,
-      verification_status: user.verification_status,
+      role: role,
+      verification_status: 'PENDING_VERIFICATION',
     });
   } catch (err) {
     return serverError(res, err.message);
   }
 });
 
-// ── POST /auth/refresh ──────────────────────────────────────────────────────
-// Rotate refresh token and issue new access token.
 router.post('/auth/refresh', async (req, res) => {
   try {
     const { refresh_token } = req.body;
@@ -174,7 +202,6 @@ router.post('/auth/refresh', async (req, res) => {
       return badRequest(res, 'Refresh token required');
     }
 
-    // Verify JWT signature
     let decoded;
     try {
       decoded = verifyRefreshToken(refresh_token);
@@ -182,24 +209,23 @@ router.post('/auth/refresh', async (req, res) => {
       return unauthorized(res, 'Invalid or expired refresh token');
     }
 
-    // Check token is in our store
-    const tokenData = refreshTokens.get(refresh_token);
+    const tokenData = getDb().prepare('SELECT * FROM refresh_tokens WHERE token = ?').get(refresh_token);
     if (!tokenData || tokenData.user_id !== decoded.user_id) {
       return unauthorized(res, 'Refresh token not recognised');
     }
 
-    // Rotate: delete old, issue new
-    refreshTokens.delete(refresh_token);
+    getDb().prepare('DELETE FROM refresh_tokens WHERE token = ?').run(refresh_token);
 
-    const user = users.get(decoded.user_id);
+    const user = getById('users', decoded.user_id);
     if (!user) return unauthorized(res, 'User not found');
 
     const new_access_token  = generateAccessToken(user);
     const new_refresh_token = generateRefreshToken(user);
-
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    refreshTokens.set(new_refresh_token, {
-      user_id:    user.id,
+    
+    insert('refresh_tokens', {
+      token: new_refresh_token,
+      user_id: user.id,
       expires_at: expiresAt.toISOString(),
     });
 
@@ -212,21 +238,11 @@ router.post('/auth/refresh', async (req, res) => {
   }
 });
 
-// ── POST /auth/logout ───────────────────────────────────────────────────────
-// Invalidate all refresh tokens for this user.
 router.post('/auth/logout', authenticate, async (req, res) => {
   try {
     const userId = req.user.id;
-
-    // Remove all refresh tokens for this user
-    for (const [token, data] of refreshTokens.entries()) {
-      if (data.user_id === userId) {
-        refreshTokens.delete(token);
-      }
-    }
-
-    logAudit(userId, 'USER_LOGOUT', 'User', userId);
-
+    deleteByColumn('refresh_tokens', 'user_id', userId);
+    logAudit(userId, 'USER_LOGOUT', 'User', userId, '{}');
     return success(res, { success: true });
   } catch (err) {
     return serverError(res, err.message);

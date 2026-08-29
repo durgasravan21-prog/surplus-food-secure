@@ -20,7 +20,7 @@
 
 import { WebSocketServer } from 'ws';
 import { verifyAccessToken } from '../utils/jwt.js';
-import { users } from '../store/index.js';
+import { getById } from '../db/database.js';
 
 // userId → Set<WebSocket>
 const connections = new Map();
@@ -43,9 +43,8 @@ export function setupWebSocket(server) {
         return;
       }
 
-      // Verify JWT
       const decoded = verifyAccessToken(token);
-      const user = users.get(decoded.user_id);
+      const user = getById('users', decoded.user_id);
       if (!user || user.suspended) {
         ws.close(4003, 'Unauthorized');
         return;
@@ -113,7 +112,7 @@ export function broadcast(userId, event, data) {
  */
 export function broadcastToRole(role, event, data) {
   for (const [userId] of connections) {
-    const user = users.get(userId);
+    const user = getById('users', userId);
     if (user && user.role === role) {
       broadcast(userId, event, data);
     }

@@ -1,7 +1,9 @@
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDemoData } from '../context/DemoDataContext';
 import { LISTING_STATUS } from '../config/constants';
 import { useCountdown } from '../hooks/useCountdown';
+import { deliveryService } from '../services/delivery';
+import { wsManager } from '../services/websocket';
 
 function DeliveryOfferCard({ listing, onAccept }) {
   const timeLeft = useCountdown(new Date(Date.now() + 5 * 60 * 1000));
@@ -58,17 +60,54 @@ function DeliveryOfferCard({ listing, onAccept }) {
 }
 
 export default function DeliveryOffersPage() {
-  const { listings } = useDemoData();
   const navigate = useNavigate();
+  const [deliveryOffers, setDeliveryOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Find listings ready for delivery assignment
-  const deliveryOffers = listings.filter(
-    (l) => l.status === LISTING_STATUS.DELIVERY_ASSIGNED || l.status === LISTING_STATUS.NGO_ACCEPTED
-  );
+  const fetchOffers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await deliveryService.getPendingOffers();
+      setDeliveryOffers(res.data || []);
+    } catch (err) {
+      console.error('Error fetching delivery offers:', err);
+      setError('Failed to load delivery offers.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleAccept = () => {
-    navigate('/dashboard/active');
+  useEffect(() => {
+    fetchOffers();
+  }, [fetchOffers]);
+
+  useEffect(() => {
+    const handleDeliveryOffer = () => {
+      fetchOffers();
+    };
+    const unsubscribe = wsManager.on('DELIVERY_OFFER', handleDeliveryOffer);
+    return () => unsubscribe();
+  }, [fetchOffers]);
+
+  const handleAccept = async (id) => {
+    try {
+      await deliveryService.acceptOffer(id);
+      navigate('/dashboard/active');
+    } catch (err) {
+      console.error('Error accepting delivery offer:', err);
+      alert('Failed to accept offer. It may have expired or been taken.');
+    }
   };
+
+  if (loading && deliveryOffers.length === 0) {
+    return <div className="stitch-dashboard"><div style={{ padding: '24px' }}>Loading pickup offers...</div></div>;
+  }
+
+  if (error) {
+    return <div className="stitch-dashboard"><div style={{ padding: '24px', color: '#ef4444' }}>{error}</div></div>;
+  }
 
   return (
     <div className="stitch-dashboard">

@@ -1,13 +1,44 @@
-import { useDemoData } from '../context/DemoDataContext';
-import { LISTING_STATUS } from '../config/constants';
+import { useState, useEffect } from 'react';
+import { statsService } from '../services/stats';
 
 export default function ImpactStatsPage() {
-  const { listings } = useDemoData();
+  const [impactStats, setImpactStats] = useState({
+    totalMeals: 0,
+    totalKg: 0,
+    totalCo2e: 0,
+    totalDelivered: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const totalMeals = listings.reduce((sum, l) => sum + (l.quantity_meals || 0), 0);
-  const totalKg = (totalMeals * 0.45).toFixed(1);
-  const totalCo2e = (totalMeals * 1.18).toFixed(1);
-  const totalDelivered = listings.filter((l) => l.status === LISTING_STATUS.DELIVERED).length;
+  useEffect(() => {
+    const fetchImpact = async () => {
+      try {
+        setLoading(true);
+        const res = await statsService.getImpact();
+        setImpactStats({
+          totalMeals: res.data?.total_meals || 0,
+          totalKg: res.data?.total_kg || 0,
+          totalCo2e: res.data?.total_co2e || 0,
+          totalDelivered: res.data?.total_delivered || 0
+        });
+      } catch (err) {
+        console.error('Error fetching impact stats:', err);
+        setError('Failed to load impact stats.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchImpact();
+  }, []);
+
+  if (loading) {
+    return <div className="stitch-dashboard"><div style={{ padding: '24px' }}>Loading impact stats...</div></div>;
+  }
+
+  if (error) {
+    return <div className="stitch-dashboard"><div style={{ padding: '24px', color: '#ef4444' }}>{error}</div></div>;
+  }
 
   return (
     <div className="stitch-dashboard">
@@ -22,25 +53,25 @@ export default function ImpactStatsPage() {
       <div className="stitch-metrics-grid">
         <div className="stitch-metric-card">
           <span className="metric-label">Meals Rescued</span>
-          <div className="metric-number">{totalMeals}</div>
+          <div className="metric-number">{impactStats.totalMeals}</div>
           <span className="metric-footnote">Served to verified beneficiaries</span>
         </div>
 
         <div className="stitch-metric-card">
           <span className="metric-label">Food Saved from Waste</span>
-          <div className="metric-number">{totalKg} <span className="unit">kg</span></div>
+          <div className="metric-number">{impactStats.totalKg} <span className="unit">kg</span></div>
           <span className="metric-footnote">Direct landfill diversion</span>
         </div>
 
         <div className="stitch-metric-card">
           <span className="metric-label">CO2e Emissions Avoided</span>
-          <div className="metric-number">{totalCo2e} <span className="unit">kg</span></div>
+          <div className="metric-number">{impactStats.totalCo2e} <span className="unit">kg</span></div>
           <span className="metric-footnote">Calculated EPA WARM factor</span>
         </div>
 
         <div className="stitch-metric-card">
           <span className="metric-label">Completed Dispatches</span>
-          <div className="metric-number">{totalDelivered}</div>
+          <div className="metric-number">{impactStats.totalDelivered}</div>
           <span className="metric-footnote">Full chain of custody verified</span>
         </div>
       </div>

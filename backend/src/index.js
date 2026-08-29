@@ -21,6 +21,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
+import { initDatabase } from './db/database.js';
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 import { generalLimiter } from './middleware/rateLimiter.js';
@@ -109,7 +110,8 @@ app.use(errorHandler);
 const server = createServer(app);
 setupWebSocket(server);
 
-// ── Start Background Jobs ───────────────────────────────────────────────────
+// ── Start Database & Background Jobs ───────────────────────────────────────────────────
+initDatabase();
 startOfferExpiryJob();
 startListingExpiryJob();
 startRadiusWidenJob();
@@ -122,6 +124,7 @@ server.listen(PORT, () => {
   console.log('  ║   AI-Matched Surplus Food Rescue Network         ║');
   console.log(`  ║   API:  http://localhost:${PORT}/v1                ║`);
   console.log(`  ║   WS:   ws://localhost:${PORT}/v1/ws               ║`);
+  console.log('  ║   DB:   Connected to Supabase PostgreSQL         ║');
   console.log('  ╚══════════════════════════════════════════════════╝');
   console.log('');
 });
