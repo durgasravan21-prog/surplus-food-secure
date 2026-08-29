@@ -14,7 +14,7 @@
  */
 
 import express from 'express';
-import { users, refreshTokens, newId, findUserByGoogleSub } from '../store/index.js';
+import { users, refreshTokens, newId, findUserByGoogleSub, restaurantProfiles, verificationDocs } from '../store/index.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { exchangeGoogleCode } from '../utils/google.js';
 import { success, badRequest, unauthorized, conflict, serverError } from '../utils/envelope.js';
@@ -62,6 +62,43 @@ router.post('/auth/google/callback', authLimiter, async (req, res) => {
       user.role = 'ADMIN';
       user.verification_status = 'APPROVED';
       users.set(user.id, user);
+    }
+
+    // Auto-approve and seed verification for specific emails for hackathon testing
+    if (user.email === 'challagollasridevi@gmail.com') {
+      user.role = 'RESTAURANT';
+      user.verification_status = 'APPROVED';
+      users.set(user.id, user);
+
+      // Create a mock verification document if it doesn't exist
+      const existingDoc = Array.from(verificationDocs.values()).find(d => d.user_id === user.id);
+      if (!existingDoc) {
+        const docId = newId();
+        verificationDocs.set(docId, {
+          id: docId,
+          user_id: user.id,
+          doc_type: 'FSSAI_LICENSE',
+          file_url: 'http://localhost:5000/uploads/default_license.pdf',
+          license_no: '12345678901234',
+          status: 'APPROVED',
+          submitted_at: new Date().toISOString(),
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: 'system'
+        });
+      }
+
+      // Create a mock restaurant profile if it doesn't exist
+      if (!restaurantProfiles.has(user.id)) {
+        restaurantProfiles.set(user.id, {
+          user_id: user.id,
+          business_name: 'Sridevi Restaurant',
+          license_no: '12345678901234',
+          address: 'Hyderabad, India',
+          lat: 17.3850,
+          lng: 78.4867,
+          verified_doc_url: 'http://localhost:5000/uploads/default_license.pdf'
+        });
+      }
     }
 
     // Generate JWT tokens
