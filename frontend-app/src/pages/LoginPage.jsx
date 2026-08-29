@@ -1,23 +1,13 @@
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { ROLES, GOOGLE_CLIENT_ID } from '../config/constants';
+import { GOOGLE_CLIENT_ID } from '../config/constants';
 import './LoginPage.css';
 
 export default function LoginPage() {
-  const { login, switchDemoRole } = useAuth();
-  const navigate = useNavigate();
-
   const handleGoogleLogin = () => {
     const clientId = GOOGLE_CLIENT_ID || import.meta.env.VITE_GOOGLE_CLIENT_ID || '279708592172-ninf0l505s7p2cmind7m745lmlnvpi0f.apps.googleusercontent.com';
     const redirectUri = `${window.location.origin}/oauth/callback`;
     const scope = 'openid email profile';
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
     window.location.href = url;
-  };
-
-  const handleQuickDemo = (roleKey) => {
-    switchDemoRole(roleKey);
-    navigate('/dashboard');
   };
 
   return (
@@ -36,30 +26,11 @@ export default function LoginPage() {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          Continue with Google OAuth
+          Sign In with Google
         </button>
 
-        <div className="demo-access-divider">
-          <span>Or Test Drive as a Demo Persona</span>
-        </div>
-
-        <div className="quick-demo-grid">
-          <button type="button" className="demo-card-btn" onClick={() => handleQuickDemo(ROLES.RESTAURANT)}>
-            <strong>Restaurant Kitchen</strong>
-            <span>Publish surplus meals</span>
-          </button>
-          <button type="button" className="demo-card-btn" onClick={() => handleQuickDemo(ROLES.NGO)}>
-            <strong>NGO Shelter</strong>
-            <span>Auto-match inbox</span>
-          </button>
-          <button type="button" className="demo-card-btn" onClick={() => handleQuickDemo(ROLES.DELIVERY_PARTNER)}>
-            <strong>Delivery Partner</strong>
-            <span>Accept pickup offers</span>
-          </button>
-          <button type="button" className="demo-card-btn" onClick={() => handleQuickDemo(ROLES.ADMIN)}>
-            <strong>Platform Admin</strong>
-            <span>Verification queue</span>
-          </button>
+        <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '12px', color: '#64748b' }}>
+          Real Google OAuth authentication enabled. Access is governed by role verification.
         </div>
       </div>
     </div>
