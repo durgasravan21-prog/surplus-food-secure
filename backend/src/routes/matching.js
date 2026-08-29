@@ -18,13 +18,13 @@ const router = express.Router();
 
 router.get('/listings/matched', authenticate, authorize('NGO', 'ADMIN'), async (req, res) => {
   try {
-    const matches = await findAll('match_attempts', { ngo_id: req.user.id });
+    const [matches, listings, users] = await Promise.all([
+      findAll('match_attempts', { ngo_id: req.user.id }),
+      findAll('listings'),
+      findAll('users')
+    ]);
     const activeMatches = matches.filter((m) => ['PENDING', 'ACCEPTED'].includes(m.outcome));
-
-    const listings = await findAll('listings');
     const listingMap = new Map(listings.map(l => [l.id, l]));
-
-    const users = await findAll('users');
     const userMap = new Map(users.map(u => [u.id, u]));
 
     const data = activeMatches.map((m) => {

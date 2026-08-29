@@ -12,8 +12,10 @@ const router = express.Router();
 
 router.get('/delivery-offers/pending', authenticate, authorize('DELIVERY_PARTNER', 'ADMIN'), async (req, res) => {
   try {
-    const assignments = await findAll('delivery_assignments', { partner_id: req.user.id, status: 'PENDING' });
-    const listings = await findAll('listings');
+    const [assignments, listings] = await Promise.all([
+      findAll('delivery_assignments', { partner_id: req.user.id, status: 'PENDING' }),
+      findAll('listings')
+    ]);
     const listingMap = new Map(listings.map(l => [l.id, l]));
 
     const data = assignments.map((d) => {

@@ -182,13 +182,16 @@ router.get('/admin/verification/queue', authenticate, authorize('ADMIN'), async 
   try {
     const { status } = req.query;
     const filter = status ? { status } : {};
-    const docs = await findAll('verification_documents', filter);
-    const usersList = await findAll('users');
+
+    const [docs, usersList] = await Promise.all([
+      findAll('verification_documents', filter),
+      findAll('users')
+    ]);
+
     const userMap = new Map(usersList.map(u => [u.id, u]));
 
-    const allDocs = await findAll('verification_documents');
     const identifierCounts = {};
-    allDocs.forEach(d => {
+    docs.forEach(d => {
       const id = d.license_no || d.reg_no;
       if (id) {
         identifierCounts[id] = (identifierCounts[id] || 0) + 1;
