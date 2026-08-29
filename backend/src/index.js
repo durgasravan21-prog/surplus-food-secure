@@ -70,7 +70,11 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Handle direct file uploads (for local storage mode)
 app.put('/uploads/:filename', (req, res) => {
-  const filePath = path.join(__dirname, '..', 'uploads', req.params.filename);
+  const uploadsDir = path.join(__dirname, '..', 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  const filePath = path.join(uploadsDir, req.params.filename);
   const writeStream = fs.createWriteStream(filePath);
   req.pipe(writeStream);
   req.on('end', () => {

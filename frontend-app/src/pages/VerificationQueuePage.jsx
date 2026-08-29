@@ -95,8 +95,40 @@ export default function VerificationQueuePage() {
                     Doc Type: <strong>{v.doc_type}</strong> | {v.license_no ? `License: ${v.license_no}` : v.reg_no ? `Reg: ${v.reg_no}` : `Vehicle: ${v.vehicle_type}`}
                   </p>
                   <p style={{ fontSize: '11px', color: '#94a3b8', margin: '4px 0 0' }}>
-                    Submitted: {new Date(v.submitted_at).toLocaleString()} | File: {v.file_url}
+                    Submitted: {new Date(v.submitted_at).toLocaleString()}
                   </p>
+                  
+                  {v.file_url && (
+                    v.file_url.toLowerCase().endsWith('.pdf') ? (
+                      <div style={{ marginTop: '10px' }}>
+                        <a href={v.file_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#2563eb', fontWeight: 600, fontSize: '12px', textDecoration: 'underline' }}>
+                          📄 View Document (PDF)
+                        </a>
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: '10px' }}>
+                        <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Document Preview:</span>
+                        <img src={v.file_url} alt="Verification Doc" style={{ maxWidth: '180px', maxHeight: '120px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(v.file_url, '_blank')} />
+                      </div>
+                    )
+                  )}
+
+                  {(v.id_file_url || v.selfie_file_url) && (
+                    <div style={{ marginTop: '10px', display: 'flex', gap: '12px' }}>
+                      {v.id_file_url && (
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>ID Card:</span>
+                          <img src={v.id_file_url} alt="Govt ID" style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(v.id_file_url, '_blank')} />
+                        </div>
+                      )}
+                      {v.selfie_file_url && (
+                        <div>
+                          <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Selfie:</span>
+                          <img src={v.selfie_file_url} alt="Selfie" style={{ maxWidth: '120px', maxHeight: '90px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer' }} onClick={() => window.open(v.selfie_file_url, '_blank')} />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
