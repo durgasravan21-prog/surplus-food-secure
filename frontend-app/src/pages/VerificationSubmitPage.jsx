@@ -12,6 +12,7 @@ export default function VerificationSubmitPage() {
   const [error, setError] = useState(null);
   const [form, setForm] = useState({
     license_no: '',
+    id_number: '',
     reg_no: '',
     org_name: '',
     address_place_id: '',
@@ -37,9 +38,12 @@ export default function VerificationSubmitPage() {
       const role = user?.role;
       let payload = {};
 
-      if (role === ROLES.RESTAURANT || role === ROLES.INDIVIDUAL_DONOR) {
+      if (role === ROLES.RESTAURANT) {
         const fileUrl = await uploadService.uploadFile(form.file, 'VERIFICATION_DOC');
         payload = { doc_type: 'FSSAI_LICENSE', license_no: form.license_no, file_url: fileUrl };
+      } else if (role === ROLES.INDIVIDUAL_DONOR) {
+        const fileUrl = await uploadService.uploadFile(form.file, 'VERIFICATION_DOC');
+        payload = { doc_type: 'GOVT_ID', license_no: form.id_number, file_url: fileUrl };
       } else if (role === ROLES.NGO) {
         const fileUrl = await uploadService.uploadFile(form.file, 'VERIFICATION_DOC');
         payload = {
@@ -76,7 +80,11 @@ export default function VerificationSubmitPage() {
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0, color: '#0f172a' }}>Submit Verification Documents</h1>
           <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0' }}>
-            Identity and license verification is required before you can list, claim, or deliver surplus food.
+            {role === ROLES.INDIVIDUAL_DONOR
+              ? 'Personal identity verification is required before publishing home-cooked surplus food.'
+              : role === ROLES.RESTAURANT
+              ? 'FSSAI License verification is required for commercial kitchen food declarations.'
+              : 'Verification is required before you can list, claim, or deliver surplus food.'}
           </p>
         </div>
         <button 
@@ -97,7 +105,7 @@ export default function VerificationSubmitPage() {
       )}
 
       <form onSubmit={handleSubmit} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {(role === ROLES.RESTAURANT || role === ROLES.INDIVIDUAL_DONOR) && (
+        {role === ROLES.RESTAURANT && (
           <>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
               FSSAI License / Business Registration Number *
@@ -111,7 +119,34 @@ export default function VerificationSubmitPage() {
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
-              Upload License Certificate Photo / PDF *
+              Upload FSSAI License Certificate Photo / PDF *
+              <input
+                name="file"
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                onChange={handleChange}
+                required
+                style={{ marginTop: '4px' }}
+              />
+            </label>
+          </>
+        )}
+
+        {role === ROLES.INDIVIDUAL_DONOR && (
+          <>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              Government Photo ID Number (Aadhaar / Voter ID / Passport) *
+              <input
+                name="id_number"
+                value={form.id_number}
+                onChange={handleChange}
+                placeholder="Enter your 12-digit Aadhaar or Govt ID number"
+                required
+                style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              Upload Identity Proof Photo / PDF *
               <input
                 name="file"
                 type="file"

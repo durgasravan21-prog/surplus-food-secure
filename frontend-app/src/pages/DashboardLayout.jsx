@@ -1,6 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useDemoData } from '../context/DemoDataContext';
 import { ROLES, LISTING_STATUS } from '../config/constants';
 import VerificationBanner from '../components/VerificationBanner';
 import './DashboardLayout.css';
@@ -23,8 +22,9 @@ const ROLE_NAVIGATION = {
       { to: '/dashboard/listings/new', label: 'Donate Home Surplus' },
       { to: '/dashboard/listings', label: 'My Donation History' },
     ]},
-    { section: 'Impact', items: [
+    { section: 'Verification & Impact', items: [
       { to: '/dashboard/stats', label: 'Community Contribution' },
+      { to: '/verification/submit', label: 'Identity Verification (ID Proof)' },
     ]}
   ],
   [ROLES.NGO]: [
@@ -60,17 +60,8 @@ const ROLE_NAVIGATION = {
   ],
 };
 
-const ALL_ROLES = [
-  { key: ROLES.RESTAURANT, label: 'Restaurant' },
-  { key: ROLES.INDIVIDUAL_DONOR, label: 'Donor' },
-  { key: ROLES.NGO, label: 'NGO Shelter' },
-  { key: ROLES.DELIVERY_PARTNER, label: 'Delivery Partner' },
-  { key: ROLES.ADMIN, label: 'Platform Admin' },
-];
-
 export default function DashboardLayout() {
-  const { user, logout, switchDemoRole } = useAuth();
-  const { listings } = useDemoData();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -78,16 +69,7 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
-  const handleRoleChange = (roleKey) => {
-    switchDemoRole(roleKey);
-    navigate('/dashboard');
-  };
-
   const roleNavGroups = ROLE_NAVIGATION[user?.role] || ROLE_NAVIGATION[ROLES.RESTAURANT];
-
-  // Count active stats for sidebar badge
-  const pendingNgoMatches = listings.filter((l) => l.status === LISTING_STATUS.MATCHED_PENDING_NGO_ACCEPT).length;
-  const inTransitCount = listings.filter((l) => l.status === LISTING_STATUS.DELIVERY_ASSIGNED).length;
 
   return (
     <div className="stitch-app">
@@ -97,25 +79,16 @@ export default function DashboardLayout() {
           <div className="stitch-brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
             <span className="brand-dot"></span>
             <span className="brand-name">Annayog</span>
-            <span className="brand-badge-stitch">Stitch AI 2.0</span>
+            <span className="brand-badge-stitch">Role Authenticated</span>
           </div>
         </div>
 
-        {/* Interactive Stitch Persona Switcher */}
+        {/* Display strictly active role badge (Persona switcher removed for security) */}
         <div className="demo-role-switcher">
-          <span className="demo-label">Persona View:</span>
-          <div className="role-pills">
-            {ALL_ROLES.map((r) => (
-              <button
-                key={r.key}
-                type="button"
-                className={`role-pill ${user?.role === r.key ? 'active' : ''}`}
-                onClick={() => handleRoleChange(r.key)}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
+          <span className="demo-label">Role:</span>
+          <span className="role-pill active" style={{ textTransform: 'capitalize', fontWeight: 700 }}>
+            {user?.role?.replace(/_/g, ' ') || 'Guest'}
+          </span>
         </div>
 
         <div className="topbar-right">
@@ -126,7 +99,7 @@ export default function DashboardLayout() {
 
           <div className="user-profile-widget">
             <div className="profile-details">
-              <span className="profile-name">{user?.org_name || user?.email?.split('@')[0]}</span>
+              <span className="profile-name">{user?.org_name || user?.name || user?.email?.split('@')[0]}</span>
               <span className="profile-role-tag">{user?.role?.replace(/_/g, ' ')}</span>
             </div>
             <button className="topbar-signout-btn" onClick={handleLogout} title="Sign Out">
@@ -141,7 +114,7 @@ export default function DashboardLayout() {
         {/* Role-Specific Left Sidebar */}
         <aside className="stitch-sidebar">
           <div className="sidebar-persona-badge">
-            <span className="persona-type">Active Persona</span>
+            <span className="persona-type">Authenticated Role</span>
             <div className="persona-title">{user?.role?.replace(/_/g, ' ')}</div>
           </div>
 
@@ -157,9 +130,6 @@ export default function DashboardLayout() {
                     className={({ isActive }) => `stitch-nav-item ${isActive ? 'active' : ''}`}
                   >
                     <span>{item.label}</span>
-                    {item.to === '/dashboard' && user?.role === ROLES.NGO && pendingNgoMatches > 0 && (
-                      <span className="nav-count-badge">{pendingNgoMatches}</span>
-                    )}
                   </NavLink>
                 ))}
               </div>
@@ -169,13 +139,9 @@ export default function DashboardLayout() {
           {/* Sidebar Status Widget */}
           <div className="sidebar-bottom-info">
             <div className="sidebar-info-card">
-              <div className="info-title">Network Status</div>
-              <div className="info-stats-row">
-                <span>Active Listings: <strong>{listings.length}</strong></span>
-                <span>In Transit: <strong>{inTransitCount}</strong></span>
-              </div>
+              <div className="info-title">Security & Compliance</div>
               <div className="info-desc">
-                Row-level locking active. Zero food waste dispatch protocol.
+                Role-gated JWT authentication enabled. Access restricted to authorized endpoints.
               </div>
             </div>
           </div>
